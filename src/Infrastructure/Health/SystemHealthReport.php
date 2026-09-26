@@ -81,8 +81,8 @@ final class SystemHealthReport
 
         $free = @disk_free_space($path);
         $total = @disk_total_space($path);
-        $freeBytes = is_float($free) || is_int($free) ? (int) $free : null;
-        $totalBytes = is_float($total) || is_int($total) ? (int) $total : null;
+        $freeBytes = $free !== false ? (int) $free : null;
+        $totalBytes = $total !== false ? (int) $total : null;
         $usedPercent = null;
         if ($freeBytes !== null && $totalBytes !== null && $totalBytes > 0) {
             $usedPercent = round((($totalBytes - $freeBytes) / $totalBytes) * 100, 1);

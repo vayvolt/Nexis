@@ -94,9 +94,7 @@ final class TableBlock extends AbstractCoreBlock
             foreach ($cells as $cell) {
                 $row[] = trim((string) $cell);
             }
-            if ($row !== []) {
-                $rows[] = $row;
-            }
+            $rows[] = $row;
         }
 
         return $rows;

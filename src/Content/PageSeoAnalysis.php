@@ -48,7 +48,7 @@ final class PageSeoAnalysis
                 $earned += $check['weight'];
             }
         }
-        $score = $total > 0 ? (int) round(($earned / $total) * 100) : 0;
+        $score = (int) round(($earned / $total) * 100);
 
         return [
             'score' => $score,
