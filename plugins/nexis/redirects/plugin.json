@@ -1,0 +1,24 @@
+{
+  "id": "nexis/redirects",
+  "name": "Redirects",
+  "version": "1.2.0",
+  "author": "Vayvolt",
+  "license": "GPL-2.0-or-later",
+  "licenseUri": "https://www.gnu.org/licenses/gpl-2.0.html",
+  "compatibleCore": "^0.3",
+  "php": ">=8.4",
+  "type": "plugin",
+  "autoload": "Nexis\\Plugins\\Redirects\\",
+  "provider": "Nexis\\Plugins\\Redirects\\RedirectsServiceProvider",
+  "uninstall": "Nexis\\Plugins\\Redirects\\RedirectsUninstallHandler",
+  "provides": {
+    "blocks": [],
+    "permissions": ["redirects.manage"],
+    "permissionRoles": ["admin", "editor", "seo"],
+    "slots": ["admin.nav"]
+  },
+  "requires": {
+    "plugins": []
+  },
+  "migrations": "migrations"
+}

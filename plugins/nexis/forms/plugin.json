@@ -1,0 +1,23 @@
+{
+  "id": "nexis/forms",
+  "name": "Formulare",
+  "version": "1.0.0",
+  "author": "Vayvolt",
+  "license": "GPL-2.0-or-later",
+  "licenseUri": "https://www.gnu.org/licenses/gpl-2.0.html",
+  "compatibleCore": "^0.3",
+  "php": ">=8.4",
+  "type": "plugin",
+  "autoload": "Nexis\\Plugins\\Forms\\",
+  "provider": "Nexis\\Plugins\\Forms\\FormsServiceProvider",
+  "uninstall": "Nexis\\Plugins\\Forms\\FormsUninstallHandler",
+  "provides": {
+    "blocks": ["nexis/forms/contact"],
+    "permissions": ["forms.manage"],
+    "slots": ["admin.nav"]
+  },
+  "requires": {
+    "plugins": []
+  },
+  "migrations": "migrations"
+}

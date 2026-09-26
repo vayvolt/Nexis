@@ -1,0 +1,28 @@
+/* Product details (JSON-LD / public) */
+.nx-product-details {
+  margin: 1.25rem 0;
+  padding: 1rem 1.15rem;
+  border: 1px solid #e7e5e4;
+  border-radius: 8px;
+  background: #fafaf9;
+}
+.nx-product-details__list {
+  margin: 0;
+  display: grid;
+  gap: .45rem .85rem;
+}
+.nx-product-details__row {
+  display: grid;
+  grid-template-columns: minmax(6rem, 9rem) 1fr;
+  gap: .35rem .75rem;
+  align-items: baseline;
+}
+.nx-product-details__row dt {
+  margin: 0;
+  color: #57534e;
+  font-weight: 600;
+  font-size: .9rem;
+}
+.nx-product-details__row dd {
+  margin: 0;
+}

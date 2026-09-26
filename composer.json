@@ -1,0 +1,67 @@
+{
+    "name": "nexis/core",
+    "description": "Nexis — individualisierbarer Homepage-Builder von Vayvolt",
+    "type": "project",
+    "license": "GPL-2.0-or-later",
+    "homepage": "https://nexis.vayvolt.de",
+    "support": {
+        "source": "https://github.com/vayvolt/Nexis",
+        "issues": "https://github.com/vayvolt/Nexis/issues"
+    },
+    "authors": [
+        {
+            "name": "Vayvolt",
+            "homepage": "https://www.vayvolt.de"
+        }
+    ],
+    "require": {
+        "php": "^8.4",
+        "ext-curl": "*",
+        "ext-gd": "*",
+        "ext-intl": "*",
+        "ext-pdo": "*",
+        "ext-sodium": "*",
+        "ext-zip": "*",
+        "bacon/bacon-qr-code": "^3.1",
+        "monolog/monolog": "^3.8",
+        "nyholm/psr7": "^1.8",
+        "nyholm/psr7-server": "^1.1",
+        "php-di/php-di": "^7.1",
+        "psr/container": "^2.0",
+        "psr/http-message": "^2.0",
+        "psr/http-server-handler": "^1.0",
+        "psr/http-server-middleware": "^1.0",
+        "psr/log": "^3.0",
+        "twig/twig": "^3.28",
+        "vlucas/phpdotenv": "^5.6"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^2.1",
+        "phpunit/phpunit": "^11.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "Nexis\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Nexis\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "analyse": "phpstan analyse",
+        "migrate": "php bin/migrate.php",
+        "seed": "php bin/seed.php",
+        "queue": "php bin/queue-work.php",
+        "backup": "php bin/backup.php",
+        "post-autoload-dump": [
+            "php -r \"copy('config/deny.htaccess', 'vendor/.htaccess');\""
+        ]
+    },
+    "config": {
+        "sort-packages": true,
+        "optimize-autoloader": true
+    }
+}

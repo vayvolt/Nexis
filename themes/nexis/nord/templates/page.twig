@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="{{ locale }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ page.documentTitle }} – {{ site.name }}</title>
+    {% if page.metaDescription %}
+        <meta name="description" content="{{ page.metaDescription }}">
+    {% endif %}
+    <meta name="robots" content="{{ isPreview|default(false) ? 'noindex,nofollow' : page.robots }}">
+    <meta property="og:type" content="{{ page.isProduct|default(false) ? 'product' : (page.isPost|default(false) ? 'article' : 'website') }}">
+    <meta property="og:site_name" content="{{ site.name }}">
+    <meta property="og:title" content="{{ page.documentTitle }}">
+    {% if page.metaDescription %}
+        <meta property="og:description" content="{{ page.metaDescription }}">
+    {% endif %}
+    <meta property="og:url" content="{{ canonical }}">
+    <meta property="og:locale" content="{{ ogLocale|default(locale) }}">
+    {% for alt in alternates %}
+        {% if alt.published|default(true) and alt.locale != locale %}
+            <meta property="og:locale:alternate" content="{{ alt.ogLocale|default(alt.hreflang|default(alt.locale)) }}">
+        {% endif %}
+    {% endfor %}
+    {% if logoUrl %}
+        <meta property="og:image" content="{{ logoUrl }}">
+    {% endif %}
+    <link rel="canonical" href="{{ canonical }}">
+    {% for alt in alternates %}
+        {% if alt.published|default(true) %}
+            <link rel="alternate" hreflang="{{ alt.hreflang }}" href="{{ alt.url }}">
+        {% endif %}
+    {% endfor %}
+    <style>{{ cssVariables|raw }}</style>
+    {% if themeCssUrl %}
+        <link rel="stylesheet" href="{{ themeCssUrl }}">
+    {% endif %}
+    {{ slot('theme.head') }}
+</head>
+<body class="theme-shell theme-nord layout-nav-{{ layout.navPosition|default('right') }} layout-footer-{{ layout.footerPosition|default('split') }}{% if layout.logoInNav|default(false) %} layout-logo-nav{% endif %}">
+<header class="theme-header">
+    <a class="theme-brand" href="{{ homeUrl }}">
+        {% if logoUrl and not (layout.logoInNav|default(false)) %}
+            <img src="{{ logoUrl }}" alt="">
+        {% endif %}
+        {% if layout.showSiteName|default(true) %}
+            <span>{{ site.name }}</span>
+        {% else %}
+            <span class="visually-hidden">{{ site.name }}</span>
+        {% endif %}
+    </a>
+    <div class="theme-header-navs">
+        <nav class="theme-nav" aria-label="{{ themeUi.ariaPrimary|default('Main navigation') }}">
+            {% if layout.logoInNav|default(false) and logoUrl %}
+                <a class="theme-nav-logo" href="{{ homeUrl }}"><img src="{{ logoUrl }}" alt="{{ site.name }}"></a>
+            {% endif %}
+            {% for item in primaryNav|default([]) %}
+                {% if item.children is defined and item.children|length > 0 %}
+                    <span class="theme-nav-item has-children">
+                        <a href="{{ item.url }}">{{ item.label }}</a>
+                        <span class="theme-nav-sub">
+                            {% for child in item.children %}
+                                <a href="{{ child.url }}">{{ child.label }}</a>
+                            {% endfor %}
+                        </span>
+                    </span>
+                {% else %}
+                    <a href="{{ item.url }}">{{ item.label }}</a>
+                {% endif %}
+            {% endfor %}
+            {% for item in accountNav|default([]) %}
+                <a class="theme-nav-account" href="{{ item.url }}">{{ item.label }}</a>
+            {% endfor %}
+        </nav>
+        <nav class="theme-nav theme-nav--locales" aria-label="{{ themeUi.ariaLocales|default('Languages') }}">
+            {% for alt in alternates %}
+                {% if alt.published|default(true) %}
+                    <a href="{{ alt.url }}"{% if alt.locale == locale %} aria-current="page" class="is-active"{% endif %}>{{ alt.locale|upper }}</a>
+                {% else %}
+                    <span class="is-unavailable" title="{{ alt.unavailableLabel|default(themeUi.unavailable|default('coming soon')) }}">{{ alt.locale|upper }}</span>
+                {% endif %}
+            {% endfor %}
+        </nav>
+    </div>
+    {{ slot('theme.header-actions') }}
+</header>
+<main class="theme-main">
+    <article{% if page.isPost|default(false) %} class="theme-post"{% endif %}>
+        {% if layout.pageTitle|default('hide') == 'show' %}
+            <h1 class="theme-page-title">{{ page.title }}</h1>
+        {% endif %}
+        {% if postMetaHtml|default('') %}
+            {{ postMetaHtml|raw }}
+        {% endif %}
+        {{ contentHtml|raw }}
+    </article>
+</main>
+<footer class="theme-footer">
+    <nav class="theme-footer-nav" aria-label="{{ themeUi.ariaFooter|default('Footer') }}">
+        {% if footerNav|default([])|length > 0 %}
+            {% for item in footerNav %}
+                <a href="{{ item.url }}">{{ item.label }}</a>
+                {% if item.children is defined %}
+                    {% for child in item.children %}
+                        <a href="{{ child.url }}">{{ child.label }}</a>
+                    {% endfor %}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+        {{ slot('theme.footer-links') }}
+    </nav>
+    {% set showFooterSite = layout.footerShowSiteName|default(true) %}
+    {% set showFooterTheme = layout.footerShowThemeName|default(true) %}
+    {% if showFooterSite or showFooterTheme %}
+        <p class="theme-footer-meta">{% if showFooterSite %}{{ site.name }}{% endif %}{% if showFooterSite and showFooterTheme %} · {% endif %}{% if showFooterTheme %}{{ themeName }}{% endif %}</p>
+    {% endif %}
+</footer>
+{{ slot('theme.footer') }}
+</body>
+</html>

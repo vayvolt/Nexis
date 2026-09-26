@@ -1,0 +1,17 @@
+{
+  "id": "nexis/nord",
+  "name": "Nord",
+  "version": "1.2.0",
+  "compatibleCore": "^0.3",
+  "slots": ["header", "footer", "after-content", "admin.preview-chrome"],
+  "templates": {
+    "page": "templates/page.twig",
+    "account": "templates/account.twig",
+    "404": "templates/not-found.twig",
+    "error": "templates/error.twig",
+    "maintenance": "templates/maintenance.twig"
+  },
+  "tokens": "tokens.json",
+  "assets": ["assets/theme.css"],
+  "breakpoints": ["sm", "md", "lg", "xl"]
+}

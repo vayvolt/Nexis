@@ -1,0 +1,23 @@
+{
+  "id": "nexis/catalog",
+  "name": "Produktkatalog",
+  "version": "1.1.0",
+  "author": "Vayvolt",
+  "license": "GPL-2.0-or-later",
+  "licenseUri": "https://www.gnu.org/licenses/gpl-2.0.html",
+  "compatibleCore": "^0.3",
+  "php": ">=8.4",
+  "type": "plugin",
+  "autoload": "Nexis\\Plugins\\Catalog\\",
+  "provider": "Nexis\\Plugins\\Catalog\\CatalogServiceProvider",
+  "uninstall": "Nexis\\Plugins\\Catalog\\CatalogUninstallHandler",
+  "provides": {
+    "blocks": ["nexis/catalog/products", "nexis/product/details"],
+    "permissions": ["catalog.manage"],
+    "slots": ["admin.nav", "theme.head"]
+  },
+  "requires": {
+    "plugins": []
+  },
+  "migrations": "migrations"
+}

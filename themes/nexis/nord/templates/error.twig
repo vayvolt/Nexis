@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="{{ uiLocale|default('de') }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ statusLabel|default(status)|default('Error') }} · {{ errorTitle|default(notFoundTitle|default('Error')) }}</title>
+    <style>{{ cssVariables|raw }}</style>
+    {% if themeCssUrl %}
+        <link rel="stylesheet" href="{{ themeCssUrl }}">
+    {% endif %}
+    <style>
+        .nx-error { max-width: 36rem; margin: 0 auto; padding: 3rem 1.25rem; }
+        .nx-error__status {
+            display: inline-block; font: 700 .75rem/1 system-ui, sans-serif; letter-spacing: .06em;
+            text-transform: uppercase; opacity: .75; margin: 0 0 .85rem;
+        }
+        .nx-error__actions { margin-top: 1.25rem; }
+        .nx-error__actions a {
+            display: inline-block; padding: .55rem 1rem; border-radius: .5rem;
+            background: var(--color-accent, #1b4d3e); color: #fff; text-decoration: none; font-weight: 650;
+        }
+        .nx-error__meta { margin-top: .85rem; font-size: .9rem; opacity: .7; }
+    </style>
+</head>
+<body class="theme-shell">
+<main class="theme-main nx-error">
+    <span class="nx-error__status">{{ statusLabel|default(status)|default('') }}</span>
+    <h1>{{ errorHeading|default(errorTitle|default(notFoundHeading|default(notFoundTitle|default('Error')))) }}</h1>
+    <p>{{ message }}</p>
+    {% if homeUrl is defined and homeUrl %}
+        <p class="nx-error__actions"><a href="{{ homeUrl }}">{{ homeLabel|default('Home') }}</a></p>
+    {% endif %}
+    {% if requestId %}
+        <p class="nx-error__meta">Request-ID: {{ requestId }}</p>
+    {% endif %}
+</main>
+</body>
+</html>

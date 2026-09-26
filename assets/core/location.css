@@ -1,0 +1,42 @@
+.nx-location {
+  margin: 0 0 1.75rem;
+}
+
+.nx-location__name {
+  margin: 0 0 1rem;
+  font-size: 1.35rem;
+}
+
+.nx-location__grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+@media (min-width: 800px) {
+  .nx-location__grid {
+    grid-template-columns: minmax(12rem, 1fr) minmax(0, 1.4fr);
+    align-items: start;
+  }
+}
+
+.nx-location__meta p,
+.nx-location__hours {
+  margin: 0 0 0.75rem;
+  line-height: 1.5;
+}
+
+.nx-location__meta a {
+  color: inherit;
+}
+
+.nx-location__map iframe {
+  width: 100%;
+  min-height: 260px;
+  border: 1px solid var(--color-border, #d6d3d1);
+  border-radius: var(--radius-md, 6px);
+}
+
+.nx-location__map-link {
+  margin: 0.4rem 0 0;
+  font-size: 0.9rem;
+}

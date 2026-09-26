@@ -1,0 +1,64 @@
+# nginx – Beispiel für Nexis (Document Root = Projektroot)
+
+Siehe ADR 006 und [06 Sicherheit](../06-sicherheit-und-betrieb.md#611-document-root-im-projektordner). Pfade anpassen.
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name example.com;
+    root /var/www/nexis;
+    index index.php;
+
+    # ssl_certificate …;
+    # ssl_certificate_key …;
+
+    # Statische Assets direkt
+    location ^~ /assets/ {
+        try_files $uri =404;
+        access_log off;
+        expires 7d;
+    }
+
+    # Geschützte Pfade
+    location ~* ^/(\.env|composer\.(json|lock)|phpunit\.xml) {
+        deny all;
+        return 403;
+    }
+    location ~* ^/(src|vendor|config|storage|database|tests|docs|bin|plugins|resources)/ {
+        deny all;
+        return 403;
+    }
+    location ~* ^/themes/.+\.(twig|json|md)$ {
+        deny all;
+        return 403;
+    }
+    location ~ /\. {
+        deny all;
+        return 403;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param HTTPS on;
+        fastcgi_pass unix:/run/php/php8.4-fpm.sock;
+    }
+}
+
+server {
+    listen 80;
+    server_name example.com;
+    return 301 https://$host$request_uri;
+}
+```
+
+Hinter einem weiteren Reverse Proxy in `.env` die Proxy-IP setzen:
+
+```env
+TRUSTED_PROXIES=10.0.0.1
+APP_URL=https://example.com
+```

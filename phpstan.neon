@@ -1,0 +1,12 @@
+parameters:
+    level: 8
+    paths:
+        - src
+        - tests
+        - bin
+        - index.php
+    excludePaths:
+        - tests/Plugin/Workshop*.php
+    scanDirectories:
+        - plugins
+    treatPhpDocTypesAsCertain: false

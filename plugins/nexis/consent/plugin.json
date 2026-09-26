@@ -1,0 +1,22 @@
+{
+  "id": "nexis/consent",
+  "name": "Consent-Banner",
+  "version": "1.1.1",
+  "author": "Vayvolt",
+  "license": "GPL-2.0-or-later",
+  "licenseUri": "https://www.gnu.org/licenses/gpl-2.0.html",
+  "compatibleCore": "^0.3",
+  "php": ">=8.4",
+  "type": "plugin",
+  "autoload": "Nexis\\Plugins\\Consent\\",
+  "provider": "Nexis\\Plugins\\Consent\\ConsentServiceProvider",
+  "provides": {
+    "blocks": [],
+    "permissions": ["consent.manage"],
+    "slots": ["admin.nav", "theme.head", "theme.footer", "theme.footer-links"]
+  },
+  "requires": {
+    "plugins": []
+  },
+  "migrations": "migrations"
+}

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="{{ locale }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }} – {{ site.name }}</title>
+    <meta name="robots" content="noindex,nofollow">
+    <style>{{ cssVariables|raw }}</style>
+    {% if themeCssUrl %}
+        <link rel="stylesheet" href="{{ themeCssUrl }}">
+    {% endif %}
+    <style>
+        .account-panel { max-width: 36rem; margin: 0 auto; }
+        .account-panel .card { background: var(--color-surface-elevated, #fff); border: 1px solid var(--color-border, #e4e4e7); border-radius: var(--radius-md, .375rem); padding: 1.25rem; margin-bottom: 1rem; }
+        .account-panel .card-danger { border-color: color-mix(in srgb, #9f1239 35%, var(--color-border, #e4e4e7)); }
+        .account-panel h1 { font-size: 1.35rem; font-weight: 650; letter-spacing: -.02em; margin: 0 0 1rem; }
+        .account-panel h2 { font-size: 1.05rem; font-weight: 650; margin: 0 0 .5rem; }
+        .account-panel label { display: block; font-weight: 600; margin: .75rem 0 .3rem; }
+        .account-panel input,
+        .account-panel select,
+        .account-panel textarea { width: 100%; padding: .6rem .7rem; border: 1px solid var(--color-border, #e4e4e7); border-radius: var(--radius-md, .375rem); font: inherit; box-sizing: border-box; background: var(--color-surface-elevated, #fff); }
+        .account-panel select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--color-text-muted, #71717a) 50%), linear-gradient(135deg, var(--color-text-muted, #71717a) 50%, transparent 50%); background-position: calc(100% - 1.1rem) calc(50% - .15rem), calc(100% - .75rem) calc(50% - .15rem); background-size: .35rem .35rem, .35rem .35rem; background-repeat: no-repeat; padding-right: 2.2rem; cursor: pointer; }
+        .account-panel textarea { min-height: 7rem; resize: vertical; line-height: 1.5; }
+        .account-panel input:focus,
+        .account-panel select:focus,
+        .account-panel textarea:focus { outline: none; border-color: var(--color-brand-primary, #3f3f46); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-brand-primary, #3f3f46) 18%, transparent); }
+        .account-panel button, .account-panel .btn { display: inline-block; background: var(--color-brand-primary, #3f3f46); color: #fff; border: 0; border-radius: var(--radius-md, .375rem); padding: .6rem 1rem; text-decoration: none; cursor: pointer; font: inherit; font-weight: 650; }
+        .account-panel button:hover, .account-panel .btn:hover { background: color-mix(in srgb, var(--color-brand-primary, #3f3f46) 88%, #000); }
+        .account-panel .btn-danger { background: #9f1239; }
+        .account-panel .btn-danger:hover { background: color-mix(in srgb, #9f1239 86%, #000); }
+        .account-panel .btn-muted { background: #71717a; }
+        .account-panel .btn-muted:hover { background: color-mix(in srgb, #71717a 86%, #000); }
+        .account-panel .muted { color: var(--color-text-muted, #71717a); }
+        .account-panel .error { color: #9f1239; margin: 0 0 1rem; }
+        .account-panel .flash { background: #f4f4f5; border: 1px solid var(--color-border, #e4e4e7); color: var(--color-text, #18181b); padding: .75rem 1rem; border-radius: var(--radius-md, .375rem); margin: 0 0 1rem; font-weight: 600; }
+        .account-panel .links { margin-top: 1rem; font-size: .95rem; }
+        .account-panel .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; }
+        .account-panel a { color: var(--color-brand-primary, #3f3f46); }
+        .account-panel .account-sections { display: flex; flex-wrap: wrap; gap: .65rem 1rem; margin: 0 0 1rem; padding: 0 0 .85rem; border-bottom: 1px solid var(--color-border, #e4e4e7); }
+        .account-panel .account-sections a { text-decoration: none; font-weight: 600; font-size: .92rem; }
+        .account-panel .nx-workshop-profile { margin: 0; }
+        .account-panel .nx-workshop-profile > summary { cursor: pointer; font-weight: 650; font-size: 1.05rem; list-style: none; }
+        .account-panel .nx-workshop-profile > summary::-webkit-details-marker { display: none; }
+        .account-panel .nx-workshop-profile > summary::after { content: "▾"; float: right; color: var(--color-text-muted, #71717a); font-weight: 500; }
+        .account-panel .nx-workshop-profile[open] > summary::after { content: "▴"; }
+        .account-panel .nx-workshop-profile > summary + * { margin-top: .75rem; }
+        .account-panel .totp-qr svg { display: block; width: 200px; height: 200px; }
+        .account-panel code { font-size: .85em; word-break: break-all; }
+        .account-modal { border: 1px solid var(--color-border, #e4e4e7); border-radius: var(--radius-md, .375rem); padding: 0; max-width: 26rem; width: calc(100% - 2rem); }
+        .account-modal::backdrop { background: rgba(24, 24, 27, .4); }
+        .account-modal form { margin: 0; padding: 1.25rem 1.35rem 1.35rem; }
+        .account-modal h2 { margin: 0 0 .5rem; font-size: 1.1rem; }
+        .account-modal p { margin: 0 0 .75rem; }
+        .account-modal__actions { display: flex; justify-content: flex-end; gap: .5rem; flex-wrap: wrap; margin-top: 1.15rem; }
+    </style>
+    {{ slot('theme.head') }}
+</head>
+<body class="theme-shell theme-nexis layout-nav-{{ layout.navPosition|default('right') }} layout-footer-{{ layout.footerPosition|default('split') }}{% if layout.logoInNav|default(false) %} layout-logo-nav{% endif %}">
+<header class="theme-header">
+    <a class="theme-brand" href="{{ homeUrl }}">
+        {% if logoUrl and not (layout.logoInNav|default(false)) %}
+            <img src="{{ logoUrl }}" alt="">
+        {% endif %}
+        {% if layout.showSiteName|default(true) %}
+            <span>{{ site.name }}</span>
+        {% else %}
+            <span class="visually-hidden">{{ site.name }}</span>
+        {% endif %}
+    </a>
+    <div class="theme-header-navs">
+        <nav class="theme-nav" aria-label="{{ themeUi.ariaPrimary|default('Main navigation') }}">
+            {% if layout.logoInNav|default(false) and logoUrl %}
+                <a class="theme-nav-logo" href="{{ homeUrl }}"><img src="{{ logoUrl }}" alt="{{ site.name }}"></a>
+            {% endif %}
+            {% for item in primaryNav|default([]) %}
+                {% if item.children is defined and item.children|length > 0 %}
+                    <span class="theme-nav-item has-children">
+                        <a href="{{ item.url }}">{{ item.label }}</a>
+                        <span class="theme-nav-sub">
+                            {% for child in item.children %}
+                                <a href="{{ child.url }}">{{ child.label }}</a>
+                            {% endfor %}
+                        </span>
+                    </span>
+                {% else %}
+                    <a href="{{ item.url }}">{{ item.label }}</a>
+                {% endif %}
+            {% endfor %}
+            {% for item in accountNav|default([]) %}
+                <a class="theme-nav-account" href="{{ item.url }}">{{ item.label }}</a>
+            {% endfor %}
+        </nav>
+        <nav class="theme-nav theme-nav--locales" aria-label="{{ themeUi.ariaLocales|default('Languages') }}">
+            {% for alt in alternates %}
+                {% if alt.published|default(true) %}
+                    <a href="{{ alt.url }}"{% if alt.locale == locale %} aria-current="page" class="is-active"{% endif %}>{{ alt.locale|upper }}</a>
+                {% else %}
+                    <span class="is-unavailable" title="{{ alt.unavailableLabel|default(themeUi.unavailable|default('coming soon')) }}">{{ alt.locale|upper }}</span>
+                {% endif %}
+            {% endfor %}
+        </nav>
+    </div>
+    {{ slot('theme.header-actions') }}
+</header>
+<main class="theme-main">
+    <div class="account-panel">
+        {{ contentHtml|raw }}
+    </div>
+</main>
+<footer class="theme-footer">
+    <nav class="theme-footer-nav" aria-label="{{ themeUi.ariaFooter|default('Footer') }}">
+        {% if footerNav|default([])|length > 0 %}
+            {% for item in footerNav %}
+                <a href="{{ item.url }}">{{ item.label }}</a>
+                {% if item.children is defined %}
+                    {% for child in item.children %}
+                        <a href="{{ child.url }}">{{ child.label }}</a>
+                    {% endfor %}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+        {{ slot('theme.footer-links') }}
+    </nav>
+    {% set showFooterSite = layout.footerShowSiteName|default(true) %}
+    {% set showFooterTheme = layout.footerShowThemeName|default(true) %}
+    {% if showFooterSite or showFooterTheme %}
+        <p class="theme-footer-meta">{% if showFooterSite %}{{ site.name }}{% endif %}{% if showFooterSite and showFooterTheme %} · {% endif %}{% if showFooterTheme %}{{ themeName }}{% endif %}</p>
+    {% endif %}
+</footer>
+{{ slot('theme.footer') }}
+</body>
+</html>

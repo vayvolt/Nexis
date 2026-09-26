@@ -1,0 +1,19 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    RewriteRule "(^|/)\." - [F]
+
+    RewriteRule ^(src|config|vendor|storage|database|tests|docs|plugins|themes|bin|resources)(/|$) - [F]
+    RewriteRule ^(composer\.(json|lock)|phpunit\.xml|phpstan\.neon|phpstan-baseline\.neon)$ - [F]
+
+    RewriteRule ^index\.php$ - [L]
+    RewriteRule \.php$ - [F]
+
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^assets/ - [L]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+DirectoryIndex index.php

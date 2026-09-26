@@ -1,0 +1,4 @@
+-- Veraltet: kanonisches Frischinstall-Schema liegt unter database/core_schema.sql
+-- (wird von Migrator/WebInstaller bei leerer schema_migrations angewendet).
+--
+-- Diese Datei bleibt als Verweis für die Doku; nicht mehr manuell als Zielschema pflegen.
