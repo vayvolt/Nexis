@@ -140,9 +140,9 @@ final class MarketplaceClient
                 $plugins[$slug] = [
                     'installed' => (string) ($row['installed'] ?? ($localVersions[$slug] ?? '')),
                     'latest' => (string) ($row['latest'] ?? ''),
-                    'downloadUrl' => isset($row['downloadUrl']) && is_string($row['downloadUrl'])
-                        ? $row['downloadUrl']
-                        : null,
+                    'downloadUrl' => $this->resolveDownloadUrl(
+                        isset($row['downloadUrl']) && is_string($row['downloadUrl']) ? $row['downloadUrl'] : null,
+                    ),
                 ];
             }
         }
@@ -153,7 +153,9 @@ final class MarketplaceClient
             $cms = [
                 'latest' => $rawCms['latest'],
                 'phpRequirement' => (string) ($rawCms['phpRequirement'] ?? ''),
-                'downloadUrl' => (string) ($rawCms['downloadUrl'] ?? ''),
+                'downloadUrl' => (string) ($this->resolveDownloadUrl(
+                    isset($rawCms['downloadUrl']) && is_string($rawCms['downloadUrl']) ? $rawCms['downloadUrl'] : null,
+                ) ?? ''),
                 'updateAvailable' => (bool) ($rawCms['updateAvailable'] ?? false),
             ];
         }
@@ -472,9 +474,9 @@ final class MarketplaceClient
             $plugins[$slug] = [
                 'installed' => (string) ($row['installed'] ?? ''),
                 'latest' => (string) ($row['latest'] ?? ''),
-                'downloadUrl' => isset($row['downloadUrl']) && is_string($row['downloadUrl'])
-                    ? $row['downloadUrl']
-                    : null,
+                'downloadUrl' => $this->resolveDownloadUrl(
+                    isset($row['downloadUrl']) && is_string($row['downloadUrl']) ? $row['downloadUrl'] : null,
+                ),
             ];
         }
 
@@ -483,11 +485,36 @@ final class MarketplaceClient
             $cms = [
                 'latest' => $rawCms['latest'],
                 'phpRequirement' => (string) ($rawCms['phpRequirement'] ?? ''),
-                'downloadUrl' => (string) ($rawCms['downloadUrl'] ?? ''),
+                'downloadUrl' => (string) ($this->resolveDownloadUrl(
+                    isset($rawCms['downloadUrl']) && is_string($rawCms['downloadUrl']) ? $rawCms['downloadUrl'] : null,
+                ) ?? ''),
                 'updateAvailable' => (bool) ($rawCms['updateAvailable'] ?? false),
             ];
         }
 
         return ['plugins' => $plugins, 'cms' => $cms];
+    }
+
+    /**
+     * Absolute directory download URLs for browser links. Relative paths would resolve
+     * against the CMS origin and break (e.g. http://local-ip/download/cms/…).
+     */
+    private function resolveDownloadUrl(?string $url): ?string
+    {
+        $url = trim((string) $url);
+        if ($url === '') {
+            return null;
+        }
+        if (preg_match('#^https?://#i', $url) === 1) {
+            return $url;
+        }
+        if ($this->baseUrl === '') {
+            return $url;
+        }
+        if (str_starts_with($url, '/')) {
+            return $this->baseUrl . $url;
+        }
+
+        return $this->baseUrl . '/' . ltrim($url, '/');
     }
 }
