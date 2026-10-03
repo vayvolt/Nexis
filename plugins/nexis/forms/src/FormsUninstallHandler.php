@@ -14,11 +14,16 @@ final class FormsUninstallHandler implements UninstallHandler
     public function uninstall(SiteId $siteId, ContainerInterface $container): void
     {
         $pdo = $container->get(PDO::class);
-        try {
-            $stmt = $pdo->prepare('DELETE FROM plugin_nexis_forms_submissions WHERE site_id = :site_id');
-            $stmt->execute(['site_id' => $siteId->value]);
-        } catch (\Throwable) {
-            // Table may be missing if migrations never ran.
+        foreach ([
+            'DELETE FROM plugin_nexis_forms_submissions WHERE site_id = :site_id',
+            'DELETE FROM plugin_nexis_forms_definitions WHERE site_id = :site_id',
+        ] as $sql) {
+            try {
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute(['site_id' => $siteId->value]);
+            } catch (\Throwable) {
+                // Table may be missing if migrations never ran.
+            }
         }
         // plugin:nexis/forms.* site_settings are wiped by core PluginUninstaller.
     }

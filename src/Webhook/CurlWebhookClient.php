@@ -37,7 +37,6 @@ final class CurlWebhookClient implements WebhookClient
         $response = curl_exec($ch);
         $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $error = curl_error($ch);
-        curl_close($ch);
         if ($response === false) {
             throw new WebhookDeliveryException('Webhook HTTP error: ' . $error, $status > 0 ? $status : null);
         }

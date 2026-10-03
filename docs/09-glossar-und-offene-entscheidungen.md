@@ -30,7 +30,7 @@ Erledigte bzw. für 0.2 festgezogene Punkte:
 3. Redis: vorerst Datei/DB-Cache; Redis optional später hinter denselben Ports.
 4. Abrechnungs-/Lizenzmodell: technisch durch `tenants` vorbereitet, Produkt ist Single-Site.
 5. ~~Lizenz des Kerns~~ → **GPL-2.0-or-later** (siehe `LICENSE`).
-6. REST-API + API-Tokens: spezifiziert in [07](07-api-und-schnittstellen.md), **noch nicht umgesetzt** (nicht in 0.2).
+6. REST-API + API-Tokens: spezifiziert in [07](07-api-und-schnittstellen.md), **lesender MVP umgesetzt** (Public + Admin, Bearer-Tokens mit Scopes); schreibende Endpunkte weiterhin offen.
 
 Noch offen für spätere Versionen:
 

@@ -8,6 +8,7 @@ use Nexis\Auth\PasswordHasher;
 use Nexis\Auth\PdoPermissionLookup;
 use Nexis\Auth\SystemRoleSeeder;
 use Nexis\Http\RequestSecurity;
+use Nexis\Infrastructure\Backup\LogicalBackup;
 use Nexis\Infrastructure\Database\Migrator;
 use Nexis\Kernel\Nexis;
 use Nexis\Plugin\ManifestLoader;
@@ -171,6 +172,15 @@ final class WebInstaller
             );
         }
 
+        $backupStamp = null;
+        $dbCreds = [
+            'host' => $dbHost,
+            'port' => $dbPort !== '' ? $dbPort : '3306',
+            'database' => $dbName,
+            'username' => $dbUser,
+            'password' => $dbPass,
+        ];
+
         try {
             // Never leave .env / installed from a failed attempt: clear leftovers first,
             // write them only after DB + content succeed.
@@ -179,6 +189,22 @@ final class WebInstaller
             $pdo = $preflight->connect($dbHost, $dbPort, $dbName, $dbUser, $dbPass);
 
             if ($resetDatabase && !$existing->isEmpty()) {
+                $logicalBackup = new LogicalBackup($this->rootPath);
+                try {
+                    $backupStamp = $logicalBackup->create($dbCreds, $appUrl !== '' ? $appUrl : null)['stamp'];
+                } catch (Throwable $backupError) {
+                    return $this->html(
+                        $this->renderForm(
+                            $basePath,
+                            $data,
+                            $this->ui->get('error.backup_failed', ['message' => $backupError->getMessage()]),
+                            $reqs,
+                            '',
+                            $existing,
+                        ),
+                        422,
+                    );
+                }
                 $preflight->wipeAllTables($pdo);
             }
 
@@ -239,6 +265,23 @@ final class WebInstaller
         } catch (Throwable $e) {
             $this->discardInstallArtifacts();
 
+            $restoreNote = '';
+            if ($backupStamp !== null && $backupStamp !== '') {
+                try {
+                    (new LogicalBackup($this->rootPath))->restore(
+                        $dbCreds,
+                        $backupStamp,
+                        true,
+                    );
+                    $restoreNote = ' ' . $this->ui->get('error.backup_restored', ['stamp' => $backupStamp]);
+                } catch (Throwable $restoreError) {
+                    $restoreNote = ' ' . $this->ui->get('error.backup_restore_failed', [
+                        'stamp' => $backupStamp,
+                        'message' => $restoreError->getMessage(),
+                    ]);
+                }
+            }
+
             $existingAfter = $existing;
             try {
                 $existingAfter = $preflight->inspectExisting(
@@ -251,7 +294,7 @@ final class WebInstaller
                 $this->renderForm(
                     $basePath,
                     $data,
-                    $this->ui->get('error.failed', ['message' => $e->getMessage()]),
+                    $this->ui->get('error.failed', ['message' => $e->getMessage()]) . $restoreNote,
                     $this->requirements(),
                     '',
                     $existingAfter,

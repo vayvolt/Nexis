@@ -6,7 +6,7 @@ Eine Installation verwaltet **eine Website**. Themes, Branding und Plugins erwei
 - Portal & Downloads: [nexis.vayvolt.de](https://nexis.vayvolt.de/)
 - Quellcode: [github.com/vayvolt/Nexis](https://github.com/vayvolt/Nexis)
 
-Aktuell **0.3.0**: Block-Builder, Admin-/Public-i18n (de/en), First-Party-Plugins, optionaler Plugin-Marktplatz. Keine öffentliche REST-API in 0.3.
+Aktuell **0.4.0**: Block-Builder, Admin-/Public-i18n (de/en), First-Party-Plugins, optionaler Plugin-/Theme-Marktplatz, Backups/Upgrade, Rollen-Matrix. Die REST-API (`/api/v1`) liest und schreibt den Kern (Website, Seiten, Übersetzungen, Builder-Dokument mit `If-Match`, Publish/Revert, Medien-Upload, Plugin-Status, Theme-Tokens, Block-Registry) inkl. API-Tokens.
 
 ## Voraussetzungen
 
@@ -47,7 +47,7 @@ Der Installer legt `.env`, Datenbank und Admin-Konto an und kann First-Party-Plu
 | `/admin/about` | Version und Update-Check |
 | `/health` | JSON-Healthcheck |
 
-First-Party-Plugins: Forms, Redirects, Consent, Blog, Katalog.  
+First-Party-Plugins: Forms, Redirects, Consent, Blog, Katalog, Experiments (A/B).  
 Themes: **Nexis** (Install-Default), Atelier, Editorial, Nord.
 
 ### Betrieb
@@ -55,6 +55,7 @@ Themes: **Nexis** (Install-Default), Atelier, Editorial, Nord.
 ```bash
 php bin/queue-work.php   # Webhooks, Mail, geplante Publishes (Cron empfohlen)
 composer backup          # DB-Dump + Medien → storage/backups/
+composer restore         # Backup auflisten / zurückspielen (--latest --yes)
 ```
 
 Go-Live: [`docs/ops/go-live.md`](docs/ops/go-live.md) · Queue: [`docs/ops/queue.md`](docs/ops/queue.md)

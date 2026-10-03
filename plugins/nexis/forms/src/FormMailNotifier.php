@@ -27,6 +27,9 @@ final class FormMailNotifier
         $this->settings = new PluginSettings(self::PLUGIN_ID, $schema, $store);
     }
 
+    /**
+     * @param array<string, string> $fields Visible field values of the submission
+     */
     public function notifySubmission(
         SiteId $siteId,
         string $submissionId,
@@ -34,6 +37,8 @@ final class FormMailNotifier
         string $email,
         string $message,
         string $locale,
+        ?FormDefinition $definition = null,
+        array $fields = [],
     ): void {
         $to = trim((string) $this->settings->get($siteId, 'notify_email', ''));
         if ($to === '' || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
@@ -48,6 +53,8 @@ final class FormMailNotifier
             'email' => $email,
             'message' => $message,
             'locale' => $locale,
+            'form' => $definition?->name ?? '',
+            'fields' => $definition !== null ? SubmitController::summary($definition, $fields) : '',
         ];
         try {
             $this->mailQueue->dispatch($payload);

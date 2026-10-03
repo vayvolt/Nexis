@@ -56,7 +56,7 @@ final class SubmissionsController
         $q = trim(RequestInput::query($request, 'q'));
         $viewId = trim(RequestInput::query($request, 'view'));
 
-        $sql = 'SELECT id, locale, name, email, message, created_at, read_at
+        $sql = 'SELECT id, form_id, locale, name, email, message, payload_json, created_at, read_at
                 FROM plugin_nexis_forms_submissions
                 WHERE site_id = :site_id';
         $params = ['site_id' => $site->id->value];
@@ -70,7 +70,7 @@ final class SubmissionsController
             $sql .= ' AND read_at IS NOT NULL';
         }
         if ($q !== '') {
-            $sql .= ' AND (name LIKE :q OR email LIKE :q OR message LIKE :q)';
+            $sql .= ' AND (name LIKE :q OR email LIKE :q OR message LIKE :q OR payload_json LIKE :q)';
             $params['q'] = '%' . $q . '%';
         }
         $sql .= ' ORDER BY created_at DESC LIMIT 200';
@@ -240,7 +240,7 @@ final class SubmissionsController
         [$user, $site, $basePath] = $ctx;
 
         $stmt = $this->pdo->prepare(
-            'SELECT id, locale, name, email, message, created_at, read_at
+            'SELECT id, form_id, locale, name, email, message, payload_json, created_at, read_at
              FROM plugin_nexis_forms_submissions
              WHERE site_id = :site_id
              ORDER BY created_at ASC',
@@ -252,17 +252,19 @@ final class SubmissionsController
         if ($fh === false) {
             return $this->responses->redirect($basePath . '/admin/forms?error=' . rawurlencode($this->ui->get($user, 'admin.error.forms_export_failed')));
         }
-        fputcsv($fh, ['id', 'locale', 'name', 'email', 'message', 'created_at', 'read_at']);
+        fputcsv($fh, ['id', 'form_id', 'locale', 'name', 'email', 'message', 'payload_json', 'created_at', 'read_at']);
         foreach ($rows as $row) {
             if (!is_array($row)) {
                 continue;
             }
             fputcsv($fh, [
                 (string) ($row['id'] ?? ''),
+                (string) ($row['form_id'] ?? ''),
                 (string) ($row['locale'] ?? ''),
                 (string) ($row['name'] ?? ''),
                 (string) ($row['email'] ?? ''),
                 (string) ($row['message'] ?? ''),
+                (string) ($row['payload_json'] ?? ''),
                 (string) ($row['created_at'] ?? ''),
                 (string) ($row['read_at'] ?? ''),
             ]);
@@ -324,7 +326,7 @@ final class SubmissionsController
     private function findOne(string $siteId, string $id): ?array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT id, locale, name, email, message, created_at, read_at
+            'SELECT id, form_id, locale, name, email, message, payload_json, created_at, read_at
              FROM plugin_nexis_forms_submissions
              WHERE id = :id AND site_id = :site_id
              LIMIT 1',

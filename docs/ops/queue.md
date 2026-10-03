@@ -8,6 +8,8 @@ php bin/queue-work.php
 
 Das Script bootet aktivierte Plugins (damit `JobHandler` / Mail-Typen greifen), verarbeitet bis zu 50 Jobs je Typ und **beendet sich danach**. Ohne regelmäßigen Lauf bleiben geplante Publishes, Webhooks, SMTP- und Plugin-Jobs liegen.
 
+Zum Abschluss prüft der Worker einmal pro Lauf den Backup-Planer aus `/admin/backups` und erstellt bei Fälligkeit ein Backup samt Aufräumen alter Stempel. Wer keinen Queue-Worker betreibt, ruft stattdessen `php bin/backup.php --scheduled` per Cron auf — siehe [restore.md](restore.md).
+
 ## Cron (empfohlen, einfach)
 
 Jede Minute:
@@ -65,5 +67,6 @@ sudo systemctl list-timers | grep nexis
 - Webhook: Ziel-URL erhält POST inkl. `X-Nexis-Signature: sha256=<hmac-hex>`
 - Nach 5 Fehlversuchen landen Jobs in `failed_jobs` (nicht still gelöscht)
 - Parallel laufende Worker: Exit `75` bei Lock; sonst Exit `1` bei Fatal
+- Backup-Planer aktiv: neuer Stempel unter Admin → Backups, „Letzter Lauf“ aktualisiert sich
 
 Cron sollte Exit≠0 überwachen (`storage/logs/queue-cron.log`).

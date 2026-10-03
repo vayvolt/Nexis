@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nexis\Http\Middleware;
 
+use Nexis\Http\BearerToken;
 use Nexis\Http\Csrf;
 use Nexis\Http\CsrfExemptRegistry;
 use Nexis\Http\ResponseFactory;
@@ -33,6 +34,11 @@ final class CsrfMiddleware implements MiddlewareInterface
 
         $path = (string) $request->getAttribute('path', $request->getUri()->getPath());
         if ($this->exempt->isExempt($path)) {
+            return $handler->handle($request);
+        }
+
+        // Bearer-authenticated API calls carry no browser session and no cookie.
+        if (BearerToken::present($request)) {
             return $handler->handle($request);
         }
 

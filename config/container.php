@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Nexis\Api\ApiGuard;
+use Nexis\Api\ApiTokenStore;
 use Nexis\Auth\AdminMembershipGuard;
 use Nexis\Auth\AuthThrottle;
 use Nexis\Auth\LoginService;
@@ -57,6 +59,7 @@ use Nexis\Content\PdoPageRepository;
 use Nexis\Content\ScheduledPublishWorker;
 use Nexis\Http\Controller\BuilderAdminController;
 use Nexis\Http\Controller\AboutAdminController;
+use Nexis\Http\Controller\BackupAdminController;
 use Nexis\Http\Controller\AccountController;
 use Nexis\Http\Controller\UiLocaleAdminController;
 use Nexis\Http\Controller\DashboardController;
@@ -78,12 +81,16 @@ use Nexis\Http\Controller\PublicPageController;
 use Nexis\Http\Controller\RobotsTxtController;
 use Nexis\Http\Controller\SettingsAdminController;
 use Nexis\Http\Controller\UserAdminController;
+use Nexis\Http\Controller\RoleAdminController;
 use Nexis\Http\Controller\SearchController;
 use Nexis\Http\Controller\SecurityAdminController;
 use Nexis\Http\Controller\SitemapController;
 use Nexis\Http\Controller\ThemeAdminController;
 use Nexis\Http\Controller\WebhookAdminController;
 use Nexis\Http\Controller\ExportAdminController;
+use Nexis\Http\Controller\Api\AdminApiController;
+use Nexis\Http\Controller\Api\ApiTokenAdminController;
+use Nexis\Http\Controller\Api\PublicApiController;
 use Nexis\Audit\AuditLogger;
 use Nexis\Cache\PageCache;
 use Nexis\Event\EventDispatcher;
@@ -115,9 +122,11 @@ use Nexis\Theme\ThemeAssetPublisher;
 use Nexis\Theme\ThemeCatalog;
 use Nexis\Theme\ThemeDiscovery;
 use Nexis\Theme\ThemeManifestLoader;
+use Nexis\Theme\ThemePackageInstaller;
 use Nexis\Theme\ThemeService;
 use Nexis\Theme\ThemeViewRenderer;
 use Nexis\Theme\TokenResolver;
+use Nexis\Update\CmsPackageUpdater;
 use Nexis\Http\Csrf;
 use Nexis\Http\AdminContentLocale;
 use Nexis\Http\HttpKernel;
@@ -128,6 +137,7 @@ use Nexis\Http\Middleware\CsrfMiddleware;
 use Nexis\Http\Middleware\ErrorHandlerMiddleware;
 use Nexis\Http\Middleware\PluginPreRouteMiddleware;
 use Nexis\Http\Middleware\RequestIdMiddleware;
+use Nexis\Http\Middleware\ApiTokenAuthMiddleware;
 use Nexis\Http\Middleware\RequireAuthMiddleware;
 use Nexis\Http\Middleware\ResolveSiteMiddleware;
 use Nexis\Http\Middleware\SessionMiddleware;
@@ -145,6 +155,11 @@ use Nexis\Http\SitemapArchiveProvider;
 use Nexis\Http\SitemapPathRegistry;
 use Nexis\Http\SessionStore;
 use Nexis\Http\ViewRenderer;
+use Nexis\Infrastructure\Backup\BackupArchiver;
+use Nexis\Infrastructure\Backup\BackupCatalog;
+use Nexis\Infrastructure\Backup\BackupScheduleRunner;
+use Nexis\Infrastructure\Backup\BackupScheduleStore;
+use Nexis\Infrastructure\Backup\LogicalBackup;
 use Nexis\Infrastructure\Database\ConnectionFactory;
 use Nexis\Infrastructure\Database\DatabaseHealth;
 use Nexis\Infrastructure\Database\Migrator;
@@ -365,6 +380,22 @@ return [
             $config->rootPath . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'cache',
         );
     }),
+    LogicalBackup::class => factory(static function (ContainerInterface $container): LogicalBackup {
+        return new LogicalBackup((string) $container->get('app.root'));
+    }),
+    BackupCatalog::class => autowire(),
+    BackupScheduleStore::class => autowire(),
+    BackupScheduleRunner::class => autowire(),
+    BackupArchiver::class => factory(static function (ContainerInterface $container): BackupArchiver {
+        /** @var string $root */
+        $root = $container->get('app.root');
+
+        return new BackupArchiver(
+            $container->get(LogicalBackup::class),
+            $root . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'tmp',
+        );
+    }),
+    CmsPackageUpdater::class => autowire(),
     PluginRuntime::class => autowire(),
     ThemeManifestLoader::class => autowire(),
     ThemeDiscovery::class => factory(static function (ContainerInterface $container): ThemeDiscovery {
@@ -377,6 +408,17 @@ return [
         );
     }),
     ThemeCatalog::class => autowire(),
+    ThemePackageInstaller::class => factory(static function (ContainerInterface $container): ThemePackageInstaller {
+        /** @var string $root */
+        $root = $container->get('app.root');
+
+        return new ThemePackageInstaller(
+            $root . DIRECTORY_SEPARATOR . 'themes',
+            $root . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'tmp',
+            $container->get(ThemeManifestLoader::class),
+            $container->get(ThemeCatalog::class),
+        );
+    }),
     TokenResolver::class => autowire(),
     ThemeAssetPublisher::class => factory(static function (ContainerInterface $container): ThemeAssetPublisher {
         return new ThemeAssetPublisher((string) $container->get('app.root'));
@@ -388,6 +430,8 @@ return [
     ThemeService::class => autowire(),
     ThemeViewRenderer::class => autowire(),
     IdempotencyStore::class => autowire(),
+    ApiTokenStore::class => autowire(),
+    ApiGuard::class => autowire(),
     AuditLogger::class => autowire(),
     SignedUrl::class => autowire(),
     JobQueue::class => autowire(),
@@ -504,14 +548,47 @@ return [
         $export = $container->get(ExportAdminController::class);
         $menus = $container->get(MenuAdminController::class);
         $users = $container->get(UserAdminController::class);
+        $roles = $container->get(RoleAdminController::class);
         $settings = $container->get(SettingsAdminController::class);
         $audit = $container->get(AuditAdminController::class);
         $about = $container->get(AboutAdminController::class);
+        $backups = $container->get(BackupAdminController::class);
         $mailLog = $container->get(MailLogAdminController::class);
         $account = $container->get(AccountController::class);
+        $apiTokens = $container->get(ApiTokenAdminController::class);
+        $publicApi = $container->get(PublicApiController::class);
+        $adminApi = $container->get(AdminApiController::class);
 
         return new RouteCollector([
             new Route('GET', '/health', $container->get(HealthController::class)),
+            new Route('GET', '/api/v1/public/sites/current', [$publicApi, 'sitesCurrent']),
+            new Route('GET', '/api/v1/public/pages', [$publicApi, 'pagesIndex']),
+            // by-path must precede the {id} route below.
+            new Route('GET', '/api/v1/public/pages/by-path', [$publicApi, 'pagesByPath']),
+            new Route('GET', '/api/v1/public/pages/{id}', [$publicApi, 'pagesShow']),
+            new Route('GET', '/api/v1/admin/site', [$adminApi, 'siteShow']),
+            new Route('PATCH', '/api/v1/admin/site', [$adminApi, 'siteUpdate']),
+            new Route('GET', '/api/v1/admin/pages', [$adminApi, 'pagesIndex']),
+            new Route('POST', '/api/v1/admin/pages', [$adminApi, 'pagesCreate']),
+            new Route('GET', '/api/v1/admin/pages/{id}', [$adminApi, 'pagesShow']),
+            new Route('PATCH', '/api/v1/admin/pages/{id}', [$adminApi, 'pagesUpdate']),
+            new Route('POST', '/api/v1/admin/pages/{id}/translations', [$adminApi, 'pagesTranslationsCreate']),
+            new Route('GET', '/api/v1/admin/pages/{id}/alternates', [$adminApi, 'pagesAlternates']),
+            new Route('GET', '/api/v1/admin/pages/{id}/document', [$adminApi, 'pagesDocument']),
+            new Route('PUT', '/api/v1/admin/pages/{id}/document', [$adminApi, 'pagesDocumentSave']),
+            new Route('POST', '/api/v1/admin/pages/{id}/publish', [$adminApi, 'pagesPublish']),
+            new Route('POST', '/api/v1/admin/pages/{id}/unpublish', [$adminApi, 'pagesUnpublish']),
+            new Route('POST', '/api/v1/admin/pages/{id}/revert', [$adminApi, 'pagesRevert']),
+            new Route('GET', '/api/v1/admin/media', [$adminApi, 'mediaIndex']),
+            new Route('POST', '/api/v1/admin/media', [$adminApi, 'mediaCreate']),
+            new Route('GET', '/api/v1/admin/tokens', [$adminApi, 'tokensIndex']),
+            new Route('DELETE', '/api/v1/admin/tokens/{id}', [$adminApi, 'tokensRevoke']),
+            new Route('GET', '/api/v1/admin/plugins', [$adminApi, 'pluginsIndex']),
+            new Route('POST', '/api/v1/admin/plugins/{vendor}/{name}/enable', [$adminApi, 'pluginsEnable']),
+            new Route('POST', '/api/v1/admin/plugins/{vendor}/{name}/disable', [$adminApi, 'pluginsDisable']),
+            new Route('GET', '/api/v1/admin/theme/tokens', [$adminApi, 'themeTokensShow']),
+            new Route('PATCH', '/api/v1/admin/theme/tokens', [$adminApi, 'themeTokensUpdate']),
+            new Route('GET', '/api/v1/admin/blocks', [$adminApi, 'blocksIndex']),
             new Route('GET', '/account', [$account, 'dashboard']),
             new Route('POST', '/account/logout', [$account, 'logout']),
             new Route('POST', '/account/profile', [$account, 'updateProfile']),
@@ -539,6 +616,7 @@ return [
             new Route('GET', '/admin/ui-locale', [$container->get(UiLocaleAdminController::class), 'switch']),
             new Route('GET', '/admin/about', [$about, 'index']),
             new Route('POST', '/admin/about/check-update', [$about, 'checkUpdate']),
+            new Route('POST', '/admin/about/upgrade', [$about, 'upgrade']),
             new Route('GET', '/admin/about/license', [$about, 'license']),
             new Route('GET', '/admin/mail', [$mailLog, 'index']),
             new Route('GET', '/admin/mail/{id}', [$mailLog, 'show']),
@@ -553,6 +631,8 @@ return [
             new Route('POST', '/admin/users', [$users, 'create']),
             new Route('POST', '/admin/users/update', [$users, 'update']),
             new Route('POST', '/admin/users/delete', [$users, 'delete']),
+            new Route('GET', '/admin/roles', [$roles, 'index']),
+            new Route('POST', '/admin/roles', [$roles, 'save']),
             new Route('GET', '/admin/settings', [$settings, 'index']),
             new Route('POST', '/admin/settings', [$settings, 'save']),
             new Route('POST', '/admin/settings/locales', [$settings, 'addLocale']),
@@ -583,6 +663,8 @@ return [
             new Route('GET', '/admin/plugins/settings', [$pluginSettings, 'edit']),
             new Route('POST', '/admin/plugins/settings', [$pluginSettings, 'save']),
             new Route('GET', '/admin/theme', [$theme, 'index']),
+            new Route('GET', '/admin/theme/marketplace', [$theme, 'marketplace']),
+            new Route('POST', '/admin/theme/marketplace/install', [$theme, 'installFromMarketplace']),
             new Route('POST', '/admin/theme/activate', [$theme, 'activate']),
             new Route('POST', '/admin/theme/branding', [$theme, 'saveBranding']),
             new Route('GET', '/admin/security', [$security, 'index']),
@@ -592,6 +674,15 @@ return [
             new Route('GET', '/admin/webhooks', [$webhooks, 'index']),
             new Route('POST', '/admin/webhooks', [$webhooks, 'create']),
             new Route('POST', '/admin/webhooks/delete', [$webhooks, 'delete']),
+            new Route('GET', '/admin/api-tokens', [$apiTokens, 'index']),
+            new Route('POST', '/admin/api-tokens', [$apiTokens, 'create']),
+            new Route('POST', '/admin/api-tokens/revoke', [$apiTokens, 'revoke']),
+            new Route('GET', '/admin/backups', [$backups, 'index']),
+            new Route('POST', '/admin/backups', [$backups, 'create']),
+            new Route('POST', '/admin/backups/download', [$backups, 'download']),
+            new Route('POST', '/admin/backups/download-sql', [$backups, 'downloadSql']),
+            new Route('POST', '/admin/backups/delete', [$backups, 'delete']),
+            new Route('POST', '/admin/backups/schedule', [$backups, 'saveSchedule']),
             new Route('GET', '/admin/export', [$export, 'index']),
             new Route('POST', '/admin/export/download', [$export, 'download']),
             new Route('POST', '/admin/export/import', [$export, 'upload']),
@@ -643,6 +734,7 @@ return [
                 $container->get(CsrfMiddleware::class),
                 $container->get(ResolveSiteMiddleware::class),
                 $container->get(MaintenanceMiddleware::class),
+                $container->get(ApiTokenAuthMiddleware::class),
                 $container->get(RequireAuthMiddleware::class),
                 $container->get(PluginPreRouteMiddleware::class),
             ],

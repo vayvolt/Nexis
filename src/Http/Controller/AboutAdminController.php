@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nexis\Http\Controller;
 
+use Nexis\Auth\Permission;
 use Nexis\Auth\SitePolicy;
 use Nexis\Auth\User;
 use Nexis\Http\RequestInput;
@@ -18,6 +19,8 @@ use Nexis\Plugin\PluginInstallStatus;
 use Nexis\Site\Site;
 use Nexis\Site\SiteRepository;
 use Nexis\Theme\ThemeCatalog;
+use Nexis\Theme\ThemeDiscovery;
+use Nexis\Update\CmsPackageUpdater;
 use PDO;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -34,8 +37,10 @@ final class AboutAdminController
         private PDO $pdo,
         private PluginCatalog $plugins,
         private ThemeCatalog $themes,
+        private ThemeDiscovery $themeDiscovery,
         private AdminUi $ui,
         private MarketplaceClient $marketplace,
+        private CmsPackageUpdater $cmsUpdater,
     ) {
     }
 
@@ -61,13 +66,21 @@ final class AboutAdminController
 
         $themeKey = (string) ($this->themes->themeKeyForSite($site->id) ?? '');
         $cmsUpdate = null;
+        $cmsReleases = [];
         $updateCheckError = RequestInput::query($request, 'update_error');
         $updateChecked = RequestInput::query($request, 'update_checked') === '1';
+        $upgradeNotice = RequestInput::query($request, 'upgraded');
+        $upgradeError = RequestInput::query($request, 'upgrade_error');
         if ($this->marketplace->configured()) {
             try {
                 $cmsUpdate = $this->runUpdateCheck($site, false)['cms'];
             } catch (Throwable) {
                 // Optional cached status; manual check surfaces errors.
+            }
+            try {
+                $cmsReleases = $this->olderCmsReleases(Nexis::VERSION);
+            } catch (Throwable) {
+                $cmsReleases = [];
             }
         }
 
@@ -98,8 +111,12 @@ final class AboutAdminController
             'os' => PHP_OS_FAMILY,
             'marketplaceConfigured' => $this->marketplace->configured(),
             'cmsUpdate' => $cmsUpdate,
+            'cmsReleases' => $cmsReleases,
             'updateChecked' => $updateChecked,
             'updateCheckError' => $updateCheckError,
+            'canUpgrade' => $this->policy->can($user, $site, Permission::SETTINGS_MANAGE),
+            'upgradeNotice' => $upgradeNotice,
+            'upgradeError' => $upgradeError,
         ], 'admin.layout'));
     }
 
@@ -132,6 +149,104 @@ final class AboutAdminController
         return $this->responses->redirect($basePath . '/admin/about?update_checked=1');
     }
 
+    public function upgrade(ServerRequestInterface $request): ResponseInterface
+    {
+        $gate = $this->authorize($request);
+        if ($gate instanceof ResponseInterface) {
+            return $gate;
+        }
+        [$user, $site, $basePath] = $gate;
+
+        if (!$this->policy->can($user, $site, Permission::SETTINGS_MANAGE)) {
+            return $this->responses->html(
+                $this->ui->get($user, 'admin.error.no_access_permission', ['permission' => Permission::SETTINGS_MANAGE]),
+                403,
+            );
+        }
+        if (!$this->marketplace->configured()) {
+            return $this->responses->redirect(
+                $basePath . '/admin/about?upgrade_error=' . rawurlencode(
+                    $this->ui->get($user, 'admin.about.update_unavailable'),
+                ),
+            );
+        }
+
+        @set_time_limit(600);
+        @ini_set('max_execution_time', '600');
+
+        $requested = trim(RequestInput::string($request, 'version'));
+
+        try {
+            $cms = null;
+            if ($requested !== '') {
+                foreach ($this->marketplace->listCmsReleases() as $row) {
+                    if ($row['version'] === $requested) {
+                        $cms = [
+                            'latest' => $row['version'],
+                            'phpRequirement' => $row['phpRequirement'],
+                            'downloadUrl' => $row['downloadUrl'],
+                            'updateAvailable' => true,
+                        ];
+                        break;
+                    }
+                }
+                if ($cms === null) {
+                    return $this->responses->redirect(
+                        $basePath . '/admin/about?upgrade_error=' . rawurlencode(
+                            $this->ui->get($user, 'admin.about.upgrade_version_missing', ['version' => $requested]),
+                        ),
+                    );
+                }
+            } else {
+                $check = $this->runUpdateCheck($site, true);
+                $cms = $check['cms'];
+                if (!is_array($cms) || empty($cms['updateAvailable']) || ($cms['downloadUrl'] ?? '') === '') {
+                    return $this->responses->redirect(
+                        $basePath . '/admin/about?upgrade_error=' . rawurlencode(
+                            $this->ui->get($user, 'admin.about.upgrade_none'),
+                        ),
+                    );
+                }
+            }
+            $result = $this->cmsUpdater->upgradeFromCatalog($cms, $site->id);
+        } catch (Throwable $e) {
+            return $this->responses->redirect(
+                $basePath . '/admin/about?upgrade_error=' . rawurlencode(
+                    $this->ui->get($user, 'admin.about.upgrade_failed', ['message' => $e->getMessage()]),
+                ),
+            );
+        }
+
+        $msgKey = version_compare(ltrim($result['to'], 'vV'), ltrim($result['from'], 'vV'), '<')
+            ? 'admin.about.downgrade_ok'
+            : 'admin.about.upgrade_ok';
+
+        return $this->responses->redirect(
+            $basePath . '/admin/about?upgraded=' . rawurlencode(
+                $this->ui->get($user, $msgKey, [
+                    'from' => $result['from'],
+                    'to' => $result['to'],
+                    'stamp' => $result['backupStamp'],
+                ]),
+            ),
+        );
+    }
+
+    /**
+     * @return list<array{version: string, phpRequirement: string, downloadUrl: string, changelogMd: string}>
+     */
+    private function olderCmsReleases(string $installed): array
+    {
+        $out = [];
+        foreach ($this->marketplace->listCmsReleases() as $row) {
+            if (version_compare(ltrim($row['version'], 'vV'), ltrim($installed, 'vV'), '<')) {
+                $out[] = $row;
+            }
+        }
+
+        return $out;
+    }
+
     public function license(ServerRequestInterface $request): ResponseInterface
     {
         $gate = $this->authorize($request);
@@ -160,6 +275,7 @@ final class AboutAdminController
     /**
      * @return array{
      *   plugins: array<string, array{installed: string, latest: string, downloadUrl: string|null}>,
+     *   themes: array<string, array{installed: string, latest: string, downloadUrl: string|null}>,
      *   cms: array{latest: string, phpRequirement: string, downloadUrl: string, updateAvailable: bool}|null
      * }
      */
@@ -171,6 +287,13 @@ final class AboutAdminController
             $version = (string) ($row['version'] ?? '');
             if ($key !== '' && $version !== '' && ($row['status'] ?? '') !== 'discovered') {
                 $localVersions[$key] = $version;
+            }
+        }
+
+        $localThemes = [];
+        foreach ($this->themeDiscovery->discover() as $manifest) {
+            if ($manifest->id !== '' && $manifest->version !== '') {
+                $localThemes[$manifest->id] = $manifest->version;
             }
         }
 
@@ -189,7 +312,7 @@ final class AboutAdminController
             'php' => PHP_VERSION,
             'db' => $dbVersion,
             'locale' => $site->defaultLocale,
-        ], $force);
+        ], $force, $localThemes);
     }
 
     /**

@@ -45,7 +45,7 @@ final class PluginPackageInstallerTest extends TestCase
                 'id' => 'acme/hello',
                 'name' => 'Hello',
                 'version' => '1.0.0',
-                'compatibleCore' => '^0.3',
+                'compatibleCore' => '^0.4',
                 'autoload' => 'Acme\\Hello\\',
                 'provider' => 'Acme\\Hello\\HelloServiceProvider',
             ], JSON_THROW_ON_ERROR),
@@ -112,7 +112,7 @@ final class PluginPackageInstallerTest extends TestCase
             'id' => 'acme/hello',
             'name' => 'Hello',
             'version' => '0.9.0',
-            'compatibleCore' => '^0.3',
+            'compatibleCore' => '^0.4',
             'autoload' => 'Acme\\Hello\\',
             'provider' => 'Acme\\Hello\\HelloServiceProvider',
         ], JSON_THROW_ON_ERROR);

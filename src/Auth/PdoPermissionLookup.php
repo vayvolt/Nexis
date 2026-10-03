@@ -59,10 +59,67 @@ final class PdoPermissionLookup implements PermissionLookup
     }
 
     /**
+     * @return list<string>
+     */
+    public function allKeys(): array
+    {
+        $stmt = $this->pdo->query('SELECT `key` FROM permissions ORDER BY `key` ASC');
+        if ($stmt === false) {
+            return [];
+        }
+        $out = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $key) {
+            if (is_string($key) && $key !== '') {
+                $out[] = $key;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function keysForRole(string $roleId): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT p.`key`
+             FROM role_permissions rp
+             INNER JOIN permissions p ON p.id = rp.permission_id
+             WHERE rp.role_id = :role_id
+             ORDER BY p.`key` ASC',
+        );
+        $stmt->execute(['role_id' => $roleId]);
+        $out = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $key) {
+            if (is_string($key) && $key !== '') {
+                $out[] = $key;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Replace all grants for a role with the given permission keys.
+     *
      * @param list<string> $keys
      */
-    public function ensurePermissions(array $keys): void
+    public function setRolePermissions(string $roleId, array $keys): void
     {
+        $unlink = $this->pdo->prepare('DELETE FROM role_permissions WHERE role_id = :role_id');
+        $unlink->execute(['role_id' => $roleId]);
+        $this->grantRole($roleId, $keys);
+    }
+
+    /**
+     * @param list<string> $keys
+     * @return list<string> newly inserted keys
+     */
+    public function ensurePermissions(array $keys): array
+    {
+        $created = [];
+        $find = $this->pdo->prepare('SELECT id FROM permissions WHERE `key` = :key LIMIT 1');
         $sql = $this->insertIgnore(
             'permissions',
             'id, `key`',
@@ -74,11 +131,18 @@ final class PdoPermissionLookup implements PermissionLookup
             if ($key === '') {
                 continue;
             }
+            $find->execute(['key' => $key]);
+            if ($find->fetchColumn() !== false) {
+                continue;
+            }
             $stmt->execute([
                 'id' => Uuid::v7(),
                 'key' => $key,
             ]);
+            $created[] = $key;
         }
+
+        return $created;
     }
 
     /**

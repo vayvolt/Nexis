@@ -56,10 +56,10 @@
             {% for item in primaryNav|default([]) %}
                 {% if item.children is defined and item.children|length > 0 %}
                     <span class="theme-nav-item has-children">
-                        <a href="{{ item.url }}">{{ item.label }}</a>
-                        <span class="theme-nav-sub">
+                        <a class="theme-nav-parent" href="{{ item.url }}" aria-haspopup="true">{{ item.label }}<span class="theme-nav-caret" aria-hidden="true"></span></a>
+                        <span class="theme-nav-sub" role="list">
                             {% for child in item.children %}
-                                <a href="{{ child.url }}">{{ child.label }}</a>
+                                <a href="{{ child.url }}" role="listitem">{{ child.label }}</a>
                             {% endfor %}
                         </span>
                     </span>

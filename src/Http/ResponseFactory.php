@@ -55,6 +55,22 @@ final class ResponseFactory
             ->withBody($this->streams->createStream($binary));
     }
 
+    /**
+     * Streams a file from disk instead of buffering it — for downloads that can
+     * grow large (backup archives, database dumps).
+     */
+    public function fileStream(string $path, string $mime): ResponseInterface
+    {
+        $response = $this->responses->createResponse(200)
+            ->withHeader('Content-Type', $mime)
+            ->withHeader('X-Content-Type-Options', 'nosniff')
+            ->withBody($this->streams->createStreamFromFile($path, 'rb'));
+
+        $size = filesize($path);
+
+        return $size === false ? $response : $response->withHeader('Content-Length', (string) $size);
+    }
+
     public function xml(string $xml, int $status = 200): ResponseInterface
     {
         return $this->responses->createResponse($status)

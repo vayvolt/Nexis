@@ -24,7 +24,7 @@ Klassische CMS-Systeme erzwingen entweder starre Templates oder einen Fork des K
 - Benutzer, Rollen, feingranulare Rechte
 - Theme-Engine mit Tokens und Slots
 - Plugin-Manager mit Lebenszyklus und Signaturprüfung
-- REST-API für Admin und ausgewählte Public-Endpunkte (**geplant**, nicht Bestandteil von 0.2)
+- REST-API für Admin und ausgewählte Public-Endpunkte (**lesender MVP**; schreibende Endpunkte geplant)
 - Mehrsprachigkeit auf Site-Ebene (eigene Page pro Locale, URL-Strategien, hreflang)
 - Basis-SEO (Title, Description, Canonical, Open Graph, Sitemap, JSON-LD WebPage/FAQ; Product via Catalog-Plugin)
 - FAQ-/Accordion-Blöcke und Standort-Block (OpenStreetMap) im Core-Builder

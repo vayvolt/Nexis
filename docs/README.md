@@ -20,7 +20,7 @@ Dokumentation für **Endanwender/Betrieb** und **Entwickler** (Plugin-/Theme-Ver
 | 04 | [Plugin-System](04-plugin-system.md) | Lebenszyklus, Hooks, Verträge, Isolation |
 | 05 | [Individualisierung und Theming](05-individualisierung-und-theming.md) | Tokens, Themes, Overrides, Slots |
 | 10 | [Mehrsprachigkeit](10-mehrsprachigkeit.md) | Locales, URLs, Übersetzungsgruppen, LocalizedMap, Admin-UI |
-| 11 | [Plugin-Marktplatz](11-plugin-marktplatz.md) | Directory-API, CMS Browse/Install/Update |
+| 11 | [Plugin- und Theme-Marktplatz](11-plugin-marktplatz.md) | Directory-API, CMS Browse/Install/Update |
 
 ### Sicherheit und Betrieb
 

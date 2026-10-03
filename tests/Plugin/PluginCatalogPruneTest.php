@@ -96,7 +96,7 @@ final class PluginCatalogPruneTest extends TestCase
             'key' => $key,
             'name' => $key,
             'version' => '1.0.0',
-            'core' => '^0.3',
+            'core' => '^0.4',
             'manifest' => '{}',
             'ts' => '2026-01-01 00:00:00.000',
         ]);

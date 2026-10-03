@@ -26,9 +26,24 @@ $t = $t ?? static fn (string $key, array $replace = [], ?string $default = null)
 /** @var array{latest: string, phpRequirement: string, downloadUrl: string, updateAvailable: bool}|null $cmsUpdate */
 /** @var bool $updateChecked */
 /** @var string $updateCheckError */
+/** @var bool $canUpgrade */
+/** @var string $upgradeNotice */
+/** @var string $upgradeError */
 ?>
 <h1><?php echo $e($t('admin.about.title')) ?></h1>
 <p class="muted"><?php echo $e($tagline) ?></p>
+
+<?php
+$upgradeNotice = (string) ($upgradeNotice ?? '');
+$upgradeError = (string) ($upgradeError ?? '');
+$canUpgrade = !empty($canUpgrade);
+?>
+<?php if ($upgradeNotice !== ''): ?>
+    <p class="flash flash--success" role="status"><?php echo $e($upgradeNotice) ?></p>
+<?php endif; ?>
+<?php if ($upgradeError !== ''): ?>
+    <p class="flash flash--error" role="alert"><?php echo $e($upgradeError) ?></p>
+<?php endif; ?>
 
 <div class="card">
     <div style="margin:0 0 1rem">
@@ -48,13 +63,14 @@ $t = $t ?? static fn (string $key, array $replace = [], ?string $default = null)
     $marketplaceConfigured = !empty($marketplaceConfigured);
     $updateChecked = !empty($updateChecked);
     $updateCheckError = (string) ($updateCheckError ?? '');
+    $updateAvailable = is_array($cmsUpdate) && !empty($cmsUpdate['updateAvailable']);
     ?>
     <?php if ($marketplaceConfigured): ?>
         <div class="about-update">
             <h3><?php echo $e($t('admin.about.updates')) ?></h3>
             <?php if ($updateCheckError !== ''): ?>
                 <p class="flash flash--error" role="alert"><?php echo $e($updateCheckError) ?></p>
-            <?php elseif ($updateChecked && is_array($cmsUpdate) && !empty($cmsUpdate['updateAvailable'])): ?>
+            <?php elseif ($updateChecked && $updateAvailable): ?>
                 <p class="flash flash--info" role="status">
                     <?php echo $e($t('admin.about.update_available', ['version' => (string) ($cmsUpdate['latest'] ?? '')])) ?>
                     <?php if (($cmsUpdate['downloadUrl'] ?? '') !== ''): ?>
@@ -67,7 +83,7 @@ $t = $t ?? static fn (string $key, array $replace = [], ?string $default = null)
                         'version' => (string) (is_array($cmsUpdate) ? ($cmsUpdate['latest'] ?? $productVersion) : $productVersion),
                     ])) ?>
                 </p>
-            <?php elseif (is_array($cmsUpdate) && !empty($cmsUpdate['updateAvailable'])): ?>
+            <?php elseif ($updateAvailable): ?>
                 <p class="flash flash--info" role="status">
                     <?php echo $e($t('admin.about.update_available', ['version' => (string) ($cmsUpdate['latest'] ?? '')])) ?>
                     <?php if (($cmsUpdate['downloadUrl'] ?? '') !== ''): ?>
@@ -77,10 +93,47 @@ $t = $t ?? static fn (string $key, array $replace = [], ?string $default = null)
             <?php else: ?>
                 <p class="muted" style="margin:0 0 .75rem"><?php echo $e($t('admin.about.update_hint')) ?></p>
             <?php endif; ?>
-            <form method="post" action="<?php echo $e($basePath) ?>/admin/about/check-update" class="inline-form">
-                <input type="hidden" name="_csrf" value="<?php echo $e($csrf) ?>">
-                <button type="submit" class="btn btn-small"><?php echo $e($t('admin.about.update_check')) ?></button>
-            </form>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+                <form method="post" action="<?php echo $e($basePath) ?>/admin/about/check-update" class="inline-form">
+                    <input type="hidden" name="_csrf" value="<?php echo $e($csrf) ?>">
+                    <button type="submit" class="btn btn-small"><?php echo $e($t('admin.about.update_check')) ?></button>
+                </form>
+                <?php if ($updateAvailable && $canUpgrade): ?>
+                    <form method="post" action="<?php echo $e($basePath) ?>/admin/about/upgrade" class="inline-form"
+                          onsubmit="return confirm(<?php echo json_encode($t('admin.about.upgrade_confirm', ['version' => (string) ($cmsUpdate['latest'] ?? '')]), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE); ?>);">
+                        <input type="hidden" name="_csrf" value="<?php echo $e($csrf) ?>">
+                        <button type="submit" class="btn btn-small"><?php echo $e($t('admin.about.upgrade_run', ['version' => (string) ($cmsUpdate['latest'] ?? '')])) ?></button>
+                    </form>
+                <?php elseif ($updateAvailable && !$canUpgrade): ?>
+                    <p class="muted" style="margin:0"><?php echo $e($t('admin.about.upgrade_need_perm')) ?></p>
+                <?php endif; ?>
+            </div>
+            <?php if ($updateAvailable && $canUpgrade): ?>
+                <p class="muted" style="margin:.75rem 0 0;font-size:.9rem"><?php echo $e($t('admin.about.upgrade_hint')) ?></p>
+            <?php endif; ?>
+            <?php
+            /** @var list<array{version: string, phpRequirement: string, downloadUrl: string, changelogMd: string}> $cmsReleases */
+            $cmsReleases = is_array($cmsReleases ?? null) ? $cmsReleases : [];
+            ?>
+            <?php if ($canUpgrade && $cmsReleases !== []): ?>
+                <div style="margin-top:1rem;padding-top:.75rem;border-top:1px solid var(--admin-border, #e7e5e4)">
+                    <h4 style="margin:0 0 .5rem;font-size:1rem"><?php echo $e($t('admin.about.downgrade_title')) ?></h4>
+                    <p class="muted" style="margin:0 0 .75rem;font-size:.9rem"><?php echo $e($t('admin.about.downgrade_hint')) ?></p>
+                    <ul style="list-style:none;margin:0;padding:0;display:grid;gap:.5rem">
+                        <?php foreach ($cmsReleases as $release): ?>
+                            <li style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center">
+                                <span><strong>v<?php echo $e((string) ($release['version'] ?? '')) ?></strong></span>
+                                <form method="post" action="<?php echo $e($basePath) ?>/admin/about/upgrade" class="inline-form"
+                                      onsubmit="return confirm(<?php echo json_encode($t('admin.about.downgrade_confirm', ['version' => (string) ($release['version'] ?? '')]), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE); ?>);">
+                                    <input type="hidden" name="_csrf" value="<?php echo $e($csrf) ?>">
+                                    <input type="hidden" name="version" value="<?php echo $e((string) ($release['version'] ?? '')) ?>">
+                                    <button type="submit" class="btn btn-small"><?php echo $e($t('admin.about.downgrade_run', ['version' => (string) ($release['version'] ?? '')])) ?></button>
+                                </form>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
         </div>
     <?php endif; ?>
     <dl class="about-meta">

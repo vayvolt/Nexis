@@ -29,7 +29,7 @@ Jede Application-Aktion ruft eine Policy auf. `SitePolicy::view` prüft Membersh
 
 Site-Isolation: Ein User ohne Membership sieht die Site nicht, auch nicht per ID-Guessing (404 statt 403 auf öffentlichen Enumeration-Pfaden, 403 im Admin).
 
-Kern-Capabilities (Auszug): `content.page.edit`, `content.page.seo`, `content.page.submit_review`, `content.page.publish`, `theme.manage`, `theme.custom_css`, `plugin.manage`, `settings.manage`, `users.manage`, `export.manage`, `webhooks.manage`, `audit.view`. System-Rollen-Templates out of the box: **Website-Admin** (`admin`), **Redakteur** (`editor`), **SEO** (`seo`), **Mitglied** (`member`). Plugin-Capabilities (z. B. `forms.manage`, `consent.manage`, `redirects.manage`) kommen aus dem Manifest/`registerPermissions` und werden beim Boot an konfigurierte Rollen vergeben (`provides.permissionRoles`, Default `admin`+`editor`; Redirects inkl. `seo`).
+Kern-Capabilities (Auszug): `content.page.edit`, `content.page.seo`, `content.page.submit_review`, `content.page.publish`, `theme.manage`, `theme.custom_css`, `plugin.manage`, `settings.manage`, `users.manage`, `export.manage`, `webhooks.manage`, `audit.view`. System-Rollen-Templates out of the box: **Website-Admin** (`admin`), **Redakteur** (`editor`), **SEO** (`seo`), **Mitglied** (`member`). Die Matrix unter `/admin/roles` (Recht `users.manage`) zeigt Rolle × Permission; Website-Admin ist fest (alle Kern- und Plugin-Rechte), andere Rollen sind editierbar inkl. Reset auf Templates. Plugin-Capabilities (z. B. `forms.manage`, `consent.manage`, `redirects.manage`) werden beim ersten Registrieren an die konfigurierten Rollen vergeben (`provides.permissionRoles`, Default `admin`+`editor`; Redirects inkl. `seo`); danach überschreibt der Boot die Matrix nicht mehr (Admin erhält neue Keys weiterhin automatisch).
 
 ## 6.4 Content Security Policy
 
@@ -103,7 +103,9 @@ Ein vollständiges Backup umfasst:
 3. `plugins/` und `themes/` (falls nicht aus Git/Artefakt)
 4. `.env` getrennt und verschlüsselt
 
-Restore ist Site-übergreifend. Site-Export/Import (ZIP unter `/admin/export`) deckt Seiten, Medien, Menüs, Redirects, Theme-Overrides und Settings ab.
+Punkt 1 und 2 deckt der Backup-Screen `/admin/backups` ab (Recht `settings.manage`): manuelles Backup, Download als ZIP oder Dump, Löschen und ein Planer mit Intervall und Aufbewahrung. Ausgeführt wird der Planer vom Queue-Worker bzw. `php bin/backup.php --scheduled`; Details in [ops/restore.md](ops/restore.md).
+
+Restore ist Site-übergreifend und läuft über `php bin/restore.php` — bewusst nur auf der Konsole. Site-Export/Import (ZIP unter `/admin/export`) deckt Seiten, Medien, Menüs, Redirects, Theme-Overrides und Settings ab.
 
 ## 6.9 Audit
 
@@ -114,6 +116,7 @@ Geschrieben werden u. a.:
 - Plugin install/enable/disable/uninstall
 - Rechteänderungen
 - Settings-Änderungen an Secrets (Wert nicht im Klartext loggen)
+- Backups: `backup.create`, `backup.download`, `backup.delete`, `backup.schedule.update`
 
 Retention: Default 180 Tage (Purge über `php bin/queue-work.php`; derzeit fest im Worker, nicht per Env konfigurierbar).
 

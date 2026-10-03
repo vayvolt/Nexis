@@ -8,7 +8,12 @@ $total = (int) ($result['total'] ?? 0);
 $page = max(1, (int) ($result['page'] ?? 1));
 $perPage = max(1, (int) ($result['perPage'] ?? 20));
 $pages = $perPage > 0 ? (int) ceil($total / $perPage) : 1;
+$coreVersion = trim((string) ($coreVersion ?? ''));
 ?>
+<style>
+    .badge-warn { background: #fef3c7; color: #92400e; }
+    code.is-warn { color: #92400e; font-weight: 600; }
+</style>
 <p class="muted"><a href="<?php echo $e($basePath) ?>/admin/plugins"><?php echo $e($t('admin.plugins.title')) ?></a></p>
 <h1><?php echo $e($t('admin.plugins.marketplace.title')) ?></h1>
 <p class="muted"><?php echo $e($t('admin.plugins.marketplace.intro')) ?></p>
@@ -68,6 +73,10 @@ $pages = $perPage > 0 ? (int) ceil($total / $perPage) : 1;
                             && $localVersion !== ''
                             && $remoteVersion !== ''
                             && version_compare(ltrim($remoteVersion, 'vV'), ltrim($localVersion, 'vV'), '>');
+                        $compatibleCore = trim((string) ($item['compatibleCore'] ?? ''));
+                        $coreOk = $coreVersion !== ''
+                            && $compatibleCore !== ''
+                            && \Nexis\Plugin\SemVer::satisfies($coreVersion, $compatibleCore);
                         $statusLabel = $local === null
                             ? $t('admin.plugins.marketplace.status.available')
                             : ($hasUpdate
@@ -91,7 +100,16 @@ $pages = $perPage > 0 ? (int) ceil($total / $perPage) : 1;
                                     <div class="muted" style="font-size:.85rem"><?php echo $e($t('admin.plugins.marketplace.local_version', ['version' => $localVersion])) ?></div>
                                 <?php endif; ?>
                             </td>
-                            <td><code><?php echo $e((string) ($item['compatibleCore'] ?? '')) ?></code></td>
+                            <td>
+                                <code<?php echo !$coreOk ? ' class="is-warn"' : '' ?>><?php echo $e($compatibleCore !== '' ? $compatibleCore : '—') ?></code>
+                                <?php if ($coreVersion !== '' && $compatibleCore !== '' && !$coreOk): ?>
+                                    <div class="muted" style="font-size:.85rem;margin-top:.25rem">
+                                        <?php echo $e($t('admin.plugins.marketplace.incompatible_core_short', [
+                                            'core' => $coreVersion,
+                                        ])) ?>
+                                    </div>
+                                <?php endif; ?>
+                            </td>
                             <td>
                                 <?php if ($hasUpdate): ?>
                                     <span class="badge" style="background:#fef3c7;color:#92400e"><?php echo $e($statusLabel) ?></span>
@@ -102,7 +120,14 @@ $pages = $perPage > 0 ? (int) ceil($total / $perPage) : 1;
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <?php if ($hasUpdate && !empty($canInstall) && ($item['downloadUrl'] ?? null) !== null): ?>
+                                <?php if ($hasUpdate && !$coreOk): ?>
+                                    <span class="badge badge-warn" title="<?php echo $e($t('admin.plugins.marketplace.incompatible_core', [
+                                        'core' => $coreVersion,
+                                        'required' => $compatibleCore !== '' ? $compatibleCore : '—',
+                                    ])) ?>">
+                                        <?php echo $e($t('admin.plugins.warn.core_short')) ?>
+                                    </span>
+                                <?php elseif ($hasUpdate && !empty($canInstall) && $coreOk && ($item['downloadUrl'] ?? null) !== null): ?>
                                     <form method="post" action="<?php echo $e($basePath) ?>/admin/plugins/marketplace/install" style="margin:0">
                                         <input type="hidden" name="_csrf" value="<?php echo $e($csrf) ?>">
                                         <input type="hidden" name="plugin" value="<?php echo $e($slug) ?>">
@@ -111,7 +136,9 @@ $pages = $perPage > 0 ? (int) ceil($total / $perPage) : 1;
                                     </form>
                                 <?php elseif ($local !== null): ?>
                                     <span class="muted"><?php echo $e($t('admin.plugins.marketplace.already_local')) ?></span>
-                                <?php elseif (!empty($canInstall) && ($item['downloadUrl'] ?? null) !== null && ($item['version'] ?? '') !== ''): ?>
+                                <?php elseif (!$coreOk && ($item['downloadUrl'] ?? null) !== null && ($item['version'] ?? '') !== ''): ?>
+                                    <span class="badge badge-warn"><?php echo $e($t('admin.plugins.warn.core_short')) ?></span>
+                                <?php elseif (!empty($canInstall) && $coreOk && ($item['downloadUrl'] ?? null) !== null && ($item['version'] ?? '') !== ''): ?>
                                     <form method="post" action="<?php echo $e($basePath) ?>/admin/plugins/marketplace/install" style="margin:0">
                                         <input type="hidden" name="_csrf" value="<?php echo $e($csrf) ?>">
                                         <input type="hidden" name="plugin" value="<?php echo $e($slug) ?>">

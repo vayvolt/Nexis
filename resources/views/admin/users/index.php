@@ -5,6 +5,12 @@ $t = $t ?? static fn (string $key, array $replace = [], ?string $default = null)
 $editId = is_string($_GET['edit'] ?? null) ? (string) $_GET['edit'] : '';
 $openNewUser = (($_GET['new'] ?? '') === '1');
 ?>
+<p class="muted" style="margin:.35rem 0 1rem">
+    <a class="btn btn-small" href="<?php echo $e($basePath) ?>/admin/users"><?php echo $e($t('admin.roles.tab_users')) ?></a>
+    <?php if (!empty($canManage)): ?>
+        <a class="btn btn-small btn-muted" href="<?php echo $e($basePath) ?>/admin/roles"><?php echo $e($t('admin.roles.tab_matrix')) ?></a>
+    <?php endif; ?>
+</p>
 <h1><?php echo $e($t('admin.users.title')) ?></h1>
 <p class="muted"><?php echo $e($t('admin.users.intro')) ?></p>
 <?php if (!empty($saved)): ?><p class="flash flash--success" role="status"><?php echo $e($t('admin.common.saved')) ?></p><?php endif; ?>

@@ -28,6 +28,10 @@ $filterQuery = static function (array $overrides = []) use ($basePath, $filterLo
 };
 ?>
 <h1><?php echo $e($t('admin.forms.title')) ?></h1>
+<p class="muted" style="margin:.35rem 0 1rem">
+    <a class="btn btn-small" href="<?php echo $e($basePath) ?>/admin/forms"><?php echo $e($t('admin.forms.tab_inbox')) ?></a>
+    <a class="btn btn-small btn-muted" href="<?php echo $e($basePath) ?>/admin/forms/builder"><?php echo $e($t('admin.forms.tab_builder')) ?></a>
+</p>
 <p class="muted">
     <?php echo $e($t('admin.forms.intro')) ?>
     · <?php echo $e($t('admin.forms.total', ['count' => (string) (int) $total])) ?>
@@ -132,6 +136,25 @@ $filterQuery = static function (array $overrides = []) use ($basePath, $filterLo
             </div>
         </div>
         <p style="margin:1rem 0 .35rem"><strong><?php echo $e($t('admin.common.email')) ?>:</strong> <a href="mailto:<?php echo $e((string) $selected['email']) ?>"><?php echo $e((string) $selected['email']) ?></a></p>
+        <?php
+        $payload = [];
+        $rawPayload = (string) ($selected['payload_json'] ?? '');
+        if ($rawPayload !== '') {
+            $decoded = json_decode($rawPayload, true);
+            if (is_array($decoded)) {
+                $payload = $decoded;
+            }
+        }
+        ?>
+        <?php if ($payload !== []): ?>
+            <h3 style="margin:1rem 0 .5rem;font-size:1rem"><?php echo $e($t('admin.forms.payload')) ?></h3>
+            <dl class="forms-payload" style="margin:0 0 1rem;display:grid;grid-template-columns:minmax(6rem,10rem) 1fr;gap:.35rem .75rem">
+                <?php foreach ($payload as $key => $value): ?>
+                    <dt class="muted" style="margin:0"><?php echo $e((string) $key) ?></dt>
+                    <dd style="margin:0"><?php echo nl2br($e(is_scalar($value) || $value === null ? (string) $value : json_encode($value, JSON_UNESCAPED_UNICODE))) ?></dd>
+                <?php endforeach; ?>
+            </dl>
+        <?php endif; ?>
         <div class="forms-message"><?php echo nl2br($e((string) $selected['message'])) ?></div>
         <div class="media-actions" style="margin-top:1rem">
             <form method="post" action="<?php echo $e($basePath) ?>/admin/forms/read">

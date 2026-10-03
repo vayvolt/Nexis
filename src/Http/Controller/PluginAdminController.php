@@ -17,6 +17,7 @@ use Nexis\Http\ViewRenderer;
 use Nexis\I18n\AdminUi;
 use Nexis\Plugin\MarketplaceClient;
 use Nexis\Plugin\PluginCatalog;
+use Nexis\Plugin\PluginCoreCompatibility;
 use Nexis\Plugin\PluginDiscovery;
 use Nexis\Plugin\PluginInstallStatus;
 use Nexis\Plugin\PluginPackageInstaller;
@@ -119,7 +120,7 @@ final class PluginAdminController
                     'db' => $dbVersion,
                     'locale' => $site->defaultLocale,
                 ]);
-                $marketplaceUpdates = $check['plugins'];
+                $marketplaceUpdates = $this->enrichMarketplacePluginUpdates($check['plugins']);
                 $cmsUpdate = $check['cms'];
             } catch (Throwable $e) {
                 $this->logger?->warning('Marketplace update check failed', ['exception' => $e->getMessage()]);
@@ -141,6 +142,7 @@ final class PluginAdminController
             'marketplaceUrl' => $this->marketplace->baseUrl(),
             'marketplaceUpdates' => $marketplaceUpdates,
             'cmsUpdate' => $cmsUpdate,
+            'coreVersion' => PluginCoreCompatibility::coreVersion(),
         ], 'admin.layout'));
     }
 
@@ -198,6 +200,7 @@ final class PluginAdminController
             'installed' => $installed,
             'installedVersions' => $installedVersions,
             'marketplaceError' => $marketplaceError,
+            'coreVersion' => PluginCoreCompatibility::coreVersion(),
         ], 'admin.layout'));
     }
 
@@ -230,6 +233,15 @@ final class PluginAdminController
             if ($detail === null) {
                 return $this->responses->redirect($basePath . '/admin/plugins/marketplace?error=' . rawurlencode(
                     $this->ui->get($user, 'admin.plugins.marketplace.not_found'),
+                ));
+            }
+            $compatibleCore = (string) ($detail['compatibleCore'] ?? '');
+            if (!PluginCoreCompatibility::isCompatibleWithCore($compatibleCore)) {
+                return $this->responses->redirect($basePath . '/admin/plugins/marketplace?error=' . rawurlencode(
+                    $this->ui->get($user, 'admin.plugins.marketplace.incompatible_core', [
+                        'core' => PluginCoreCompatibility::coreVersion(),
+                        'required' => $compatibleCore !== '' ? $compatibleCore : '—',
+                    ]),
                 ));
             }
             $latest = is_array($detail['latest'] ?? null) ? $detail['latest'] : [];
@@ -486,5 +498,32 @@ final class PluginAdminController
         }
 
         return $missing;
+    }
+
+    /**
+     * @param array<string, array<string, mixed>> $updates
+     * @return array<string, array<string, mixed>>
+     */
+    private function enrichMarketplacePluginUpdates(array $updates): array
+    {
+        foreach ($updates as $slug => &$row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $compatibleCore = '';
+            try {
+                $detail = $this->marketplace->plugin($slug);
+                if (is_array($detail)) {
+                    $compatibleCore = (string) ($detail['compatibleCore'] ?? '');
+                }
+            } catch (Throwable) {
+                $compatibleCore = '';
+            }
+            $row['compatibleCore'] = $compatibleCore;
+            $row['coreCompatible'] = PluginCoreCompatibility::isCompatibleWithCore($compatibleCore);
+        }
+        unset($row);
+
+        return $updates;
     }
 }

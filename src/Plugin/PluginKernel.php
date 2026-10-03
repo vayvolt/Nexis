@@ -387,6 +387,8 @@ final class PluginKernel
 
     /**
      * Persist registered plugin permissions into the DB and grant to roles.
+     * Admin always receives every registered key. Other roles only get keys that
+     * were newly inserted (so the Roles matrix can revoke without being overwritten).
      */
     public function syncPermissions(
         \Nexis\Auth\PdoPermissionLookup $permissions,
@@ -394,11 +396,21 @@ final class PluginKernel
         \Nexis\Site\SiteId $siteId,
     ): void {
         foreach ($this->permissionGrants as $grant) {
-            $permissions->ensurePermissions($grant['keys']);
+            $newKeys = $permissions->ensurePermissions($grant['keys']);
+            $adminId = $users->findRoleIdBySlug($siteId, \Nexis\Auth\RoleSlug::ADMIN);
+            if ($adminId !== null) {
+                $permissions->grantRole($adminId, $grant['keys']);
+            }
+            if ($newKeys === []) {
+                continue;
+            }
             foreach ($grant['roles'] as $slug) {
+                if ($slug === \Nexis\Auth\RoleSlug::ADMIN) {
+                    continue;
+                }
                 $roleId = $users->findRoleIdBySlug($siteId, $slug);
                 if ($roleId !== null) {
-                    $permissions->grantRole($roleId, $grant['keys']);
+                    $permissions->grantRole($roleId, $newKeys);
                 }
             }
         }

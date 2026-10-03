@@ -74,23 +74,94 @@ final class MarketplaceClient
     }
 
     /**
-     * Check for CMS + plugin updates and report anonymous install stats.
+     * @return array{items: list<array<string, mixed>>, total: int, page: int, perPage: int}
+     */
+    public function searchThemes(string $q = '', int $page = 1, int $perPage = 20): array
+    {
+        $query = [
+            'q' => $q,
+            'page' => max(1, $page),
+            'perPage' => max(1, min(50, $perPage)),
+        ];
+        if ($this->coreVersion !== '') {
+            $query['compatible'] = $this->coreVersion;
+        }
+        /** @var array{items?: mixed, total?: mixed, page?: mixed, perPage?: mixed} $data */
+        $data = $this->getJson('/api/v1/themes', $query);
+
+        return [
+            'items' => isset($data['items']) && is_array($data['items']) ? array_values($data['items']) : [],
+            'total' => (int) ($data['total'] ?? 0),
+            'page' => (int) ($data['page'] ?? 1),
+            'perPage' => (int) ($data['perPage'] ?? 20),
+        ];
+    }
+
+    /**
+     * Published CMS packages from the directory (newest first).
+     *
+     * @return list<array{version: string, phpRequirement: string, downloadUrl: string, changelogMd: string}>
+     */
+    public function listCmsReleases(): array
+    {
+        if (!$this->configured()) {
+            return [];
+        }
+        try {
+            $data = $this->getJson('/api/v1/cms/releases');
+        } catch (RuntimeException) {
+            return [];
+        }
+        $raw = $data['items'] ?? null;
+        if (!is_array($raw)) {
+            return [];
+        }
+        $out = [];
+        foreach ($raw as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $version = trim((string) ($row['version'] ?? ''));
+            $url = trim((string) ($row['downloadUrl'] ?? ''));
+            if ($version === '' || $url === '') {
+                continue;
+            }
+            $resolved = $this->resolveDownloadUrl($url);
+            $out[] = [
+                'version' => $version,
+                'phpRequirement' => (string) ($row['php'] ?? $row['phpRequirement'] ?? '>=8.4'),
+                'downloadUrl' => (string) ($resolved ?? $url),
+                'changelogMd' => (string) ($row['changelogMd'] ?? ''),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Check for CMS + plugin + theme updates and report anonymous install stats.
      * Network + telemetry at most once per {@see CHECK_TTL_SECONDS}; otherwise returns cache.
      *
      * @param array<string, string> $localVersions pluginKey => version
      * @param array{php?: string, db?: string, locale?: string, install_id?: string} $installInfo
+     * @param array<string, string> $localThemes themeKey => version
      * @return array{
      *   plugins: array<string, array{installed: string, latest: string, downloadUrl: string|null}>,
+     *   themes: array<string, array{installed: string, latest: string, downloadUrl: string|null}>,
      *   cms: array{latest: string, phpRequirement: string, downloadUrl: string, updateAvailable: bool}|null
      * }
      */
-    public function checkForUpdates(array $localVersions, array $installInfo = [], bool $force = false): array
-    {
+    public function checkForUpdates(
+        array $localVersions,
+        array $installInfo = [],
+        bool $force = false,
+        array $localThemes = [],
+    ): array {
         if (!$this->configured()) {
-            return ['plugins' => [], 'cms' => null];
+            return ['plugins' => [], 'themes' => [], 'cms' => null];
         }
 
-        $fingerprint = $this->fingerprint($localVersions, $installInfo);
+        $fingerprint = $this->fingerprint($localVersions, $installInfo, $localThemes);
         $cached = $this->readCache();
         $now = time();
         $expiresAt = (int) ($cached['expiresAt'] ?? ((int) ($cached['checkedAt'] ?? 0) + self::CHECK_TTL_SECONDS));
@@ -103,6 +174,7 @@ final class MarketplaceClient
             return $this->normalizeUpdatePayload(
                 is_array($cached['plugins'] ?? null) ? $cached['plugins'] : [],
                 $cached['cms'] ?? null,
+                is_array($cached['themes'] ?? null) ? $cached['themes'] : [],
             );
         }
 
@@ -113,10 +185,11 @@ final class MarketplaceClient
             'db' => (string) ($installInfo['db'] ?? ''),
             'locale' => (string) ($installInfo['locale'] ?? ''),
             'plugins' => $localVersions,
+            'themes' => $localThemes,
         ];
 
         try {
-            /** @var array{cms?: mixed, plugins?: mixed, telemetry?: mixed} $data */
+            /** @var array{cms?: mixed, plugins?: mixed, themes?: mixed, telemetry?: mixed} $data */
             $data = $this->postJson('/api/v1/update-check', $body);
         } catch (RuntimeException $e) {
             $this->logger?->warning('Marketplace update-check failed', ['exception' => $e->getMessage()]);
@@ -124,10 +197,11 @@ final class MarketplaceClient
                 return $this->normalizeUpdatePayload(
                     is_array($cached['plugins'] ?? null) ? $cached['plugins'] : [],
                     $cached['cms'] ?? null,
+                    is_array($cached['themes'] ?? null) ? $cached['themes'] : [],
                 );
             }
 
-            return ['plugins' => [], 'cms' => null];
+            return ['plugins' => [], 'themes' => [], 'cms' => null];
         }
 
         $plugins = [];
@@ -139,6 +213,23 @@ final class MarketplaceClient
                 }
                 $plugins[$slug] = [
                     'installed' => (string) ($row['installed'] ?? ($localVersions[$slug] ?? '')),
+                    'latest' => (string) ($row['latest'] ?? ''),
+                    'downloadUrl' => $this->resolveDownloadUrl(
+                        isset($row['downloadUrl']) && is_string($row['downloadUrl']) ? $row['downloadUrl'] : null,
+                    ),
+                ];
+            }
+        }
+
+        $themes = [];
+        $rawThemes = $data['themes'] ?? null;
+        if (is_array($rawThemes)) {
+            foreach ($rawThemes as $slug => $row) {
+                if (!is_string($slug) || !is_array($row)) {
+                    continue;
+                }
+                $themes[$slug] = [
+                    'installed' => (string) ($row['installed'] ?? ($localThemes[$slug] ?? '')),
                     'latest' => (string) ($row['latest'] ?? ''),
                     'downloadUrl' => $this->resolveDownloadUrl(
                         isset($row['downloadUrl']) && is_string($row['downloadUrl']) ? $row['downloadUrl'] : null,
@@ -160,7 +251,7 @@ final class MarketplaceClient
             ];
         }
 
-        $result = ['plugins' => $plugins, 'cms' => $cms];
+        $result = ['plugins' => $plugins, 'themes' => $themes, 'cms' => $cms];
         $telemetry = is_array($data['telemetry'] ?? null) ? $data['telemetry'] : [];
         $recorded = (bool) ($telemetry['recorded'] ?? true);
         // If the directory could not store stats, retry sooner than the normal 12h window.
@@ -170,6 +261,7 @@ final class MarketplaceClient
             'expiresAt' => time() + $ttl,
             'fingerprint' => $fingerprint,
             'plugins' => $plugins,
+            'themes' => $themes,
             'cms' => $cms,
             'telemetryRecorded' => $recorded,
         ]);
@@ -180,15 +272,18 @@ final class MarketplaceClient
     /**
      * @param array<string, string> $localVersions
      * @param array{php?: string, db?: string, locale?: string, install_id?: string} $installInfo
+     * @param array<string, string> $localThemes
      */
-    private function fingerprint(array $localVersions, array $installInfo): string
+    private function fingerprint(array $localVersions, array $installInfo, array $localThemes = []): string
     {
         ksort($localVersions);
+        ksort($localThemes);
 
         return hash('sha256', (string) json_encode([
             'install_id' => (string) ($installInfo['install_id'] ?? ''),
             'nexis' => $this->coreVersion,
             'plugins' => $localVersions,
+            'themes' => $localThemes,
             'php' => (string) ($installInfo['php'] ?? PHP_VERSION),
             'db' => (string) ($installInfo['db'] ?? ''),
             'locale' => (string) ($installInfo['locale'] ?? ''),
@@ -280,10 +375,16 @@ final class MarketplaceClient
                 }
                 if (version_compare($this->normalizeVersion($latest), $this->normalizeVersion($installed), '>')) {
                     $download = $item['downloadUrl'] ?? null;
+                    $compatibleCore = trim((string) ($item['compatibleCore'] ?? ''));
                     $updates[$slug] = [
                         'installed' => $installed,
                         'latest' => $latest,
                         'downloadUrl' => is_string($download) ? $download : null,
+                        'compatibleCore' => $compatibleCore,
+                        'coreCompatible' => PluginCoreCompatibility::isCompatibleWithCore(
+                            $compatibleCore,
+                            $this->coreVersion,
+                        ),
                     ];
                 }
             }
@@ -341,6 +442,48 @@ final class MarketplaceClient
     }
 
     /**
+     * @return array<string, mixed>|null
+     */
+    public function theme(string $slug): ?array
+    {
+        $slug = trim($slug);
+        if ($slug === '' || !str_contains($slug, '/')) {
+            return null;
+        }
+        [$vendor, $name] = explode('/', $slug, 2);
+        try {
+            return $this->getJson('/api/v1/themes/' . rawurlencode($vendor) . '/' . rawurlencode($name));
+        } catch (RuntimeException $e) {
+            if (str_contains($e->getMessage(), '404')) {
+                return null;
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Downloads a theme release ZIP. Returns sha256 of the file.
+     */
+    public function downloadThemeRelease(string $slug, string $version, string $targetZipPath): string
+    {
+        $slug = trim($slug);
+        $version = trim($version);
+        if ($slug === '' || !str_contains($slug, '/') || $version === '') {
+            throw new RuntimeException('Invalid marketplace theme reference.');
+        }
+        [$vendor, $name] = explode('/', $slug, 2);
+        $path = '/api/v1/themes/' . rawurlencode($vendor) . '/' . rawurlencode($name)
+            . '/download/' . rawurlencode($version);
+        $this->download($path, $targetZipPath);
+        $sha = hash_file('sha256', $targetZipPath);
+        if ($sha === false) {
+            throw new RuntimeException('Downloaded package unreadable.');
+        }
+
+        return $sha;
+    }
+
+    /**
      * @param array<string, scalar> $query
      * @return array<string, mixed>
      */
@@ -379,14 +522,76 @@ final class MarketplaceClient
     }
 
     /**
+     * Download any absolute or directory-relative URL to a local file. Returns SHA-256.
+     */
+    public function downloadUrlToFile(string $url, string $targetFile): string
+    {
+        $url = trim($url);
+        if ($url === '') {
+            throw new RuntimeException('Empty download URL.');
+        }
+        if (!preg_match('#^https?://#i', $url)) {
+            if (!str_starts_with($url, '/')) {
+                $url = '/' . $url;
+            }
+            if ($this->baseUrl === '') {
+                throw new RuntimeException('Plugin directory URL is not configured.');
+            }
+            $url = $this->baseUrl . $url;
+        }
+        if (!function_exists('curl_init')) {
+            throw new RuntimeException('ext-curl fehlt für Marketplace-Client.');
+        }
+        $dir = dirname($targetFile);
+        if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
+            throw new RuntimeException('Cannot create download directory.');
+        }
+        $fp = fopen($targetFile, 'wb');
+        if ($fp === false) {
+            throw new RuntimeException('Cannot write download target.');
+        }
+        $ch = curl_init($url);
+        if ($ch === false) {
+            fclose($fp);
+            throw new RuntimeException('curl_init failed');
+        }
+        curl_setopt_array($ch, [
+            CURLOPT_FILE => $fp,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_TIMEOUT => 300,
+            CURLOPT_CONNECTTIMEOUT => 15,
+            CURLOPT_HTTPHEADER => [
+                'User-Agent: Nexis-CMS/' . ($this->coreVersion !== '' ? $this->coreVersion : 'dev'),
+            ],
+        ]);
+        $ok = curl_exec($ch);
+        $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err = curl_error($ch);
+        fclose($fp);
+        if ($ok !== true || $status < 200 || $status >= 300) {
+            @unlink($targetFile);
+            $this->logger?->error('Marketplace download failed', ['url' => $url, 'status' => $status, 'error' => $err]);
+            throw new RuntimeException('Download failed (HTTP ' . $status . ')' . ($err !== '' ? ': ' . $err : ''));
+        }
+        $sha = hash_file('sha256', $targetFile);
+        if ($sha === false || filesize($targetFile) <= 0) {
+            @unlink($targetFile);
+            throw new RuntimeException('Downloaded package unreadable.');
+        }
+
+        return $sha;
+    }
+
+    /**
      * @param array<string, scalar> $query
      */
     private function download(string $path, string $targetFile, array $query = []): void
     {
-        $body = $this->request('GET', $path, $query, null, true);
-        if (file_put_contents($targetFile, $body) === false) {
-            throw new RuntimeException('Cannot write marketplace package.');
+        $url = $path;
+        if ($query !== []) {
+            $url .= (str_contains($path, '?') ? '&' : '?') . http_build_query($query);
         }
+        $this->downloadUrlToFile($url, $targetFile);
     }
 
     /**
@@ -442,7 +647,6 @@ final class MarketplaceClient
         $body = curl_exec($ch);
         $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $err = curl_error($ch);
-        curl_close($ch);
         if (!is_string($body)) {
             $this->logger?->error('Marketplace request failed', ['url' => $url, 'error' => $err]);
             throw new RuntimeException('Marketplace unreachable: ' . $err);
@@ -459,12 +663,14 @@ final class MarketplaceClient
 
     /**
      * @param array<mixed> $rawPlugins
+     * @param array<mixed> $rawThemes
      * @return array{
      *   plugins: array<string, array{installed: string, latest: string, downloadUrl: string|null}>,
+     *   themes: array<string, array{installed: string, latest: string, downloadUrl: string|null}>,
      *   cms: array{latest: string, phpRequirement: string, downloadUrl: string, updateAvailable: bool}|null
      * }
      */
-    private function normalizeUpdatePayload(array $rawPlugins, mixed $rawCms): array
+    private function normalizeUpdatePayload(array $rawPlugins, mixed $rawCms, array $rawThemes = []): array
     {
         $plugins = [];
         foreach ($rawPlugins as $slug => $row) {
@@ -472,6 +678,20 @@ final class MarketplaceClient
                 continue;
             }
             $plugins[$slug] = [
+                'installed' => (string) ($row['installed'] ?? ''),
+                'latest' => (string) ($row['latest'] ?? ''),
+                'downloadUrl' => $this->resolveDownloadUrl(
+                    isset($row['downloadUrl']) && is_string($row['downloadUrl']) ? $row['downloadUrl'] : null,
+                ),
+            ];
+        }
+
+        $themes = [];
+        foreach ($rawThemes as $slug => $row) {
+            if (!is_string($slug) || !is_array($row)) {
+                continue;
+            }
+            $themes[$slug] = [
                 'installed' => (string) ($row['installed'] ?? ''),
                 'latest' => (string) ($row['latest'] ?? ''),
                 'downloadUrl' => $this->resolveDownloadUrl(
@@ -492,7 +712,7 @@ final class MarketplaceClient
             ];
         }
 
-        return ['plugins' => $plugins, 'cms' => $cms];
+        return ['plugins' => $plugins, 'themes' => $themes, 'cms' => $cms];
     }
 
     /**

@@ -131,9 +131,25 @@ $cmsUpdate = is_array($cmsUpdate ?? null) ? $cmsUpdate : null;
         <?php endif; ?>
     </p>
 <?php endif; ?>
-<?php if ($marketplaceUpdates !== []): ?>
+<?php
+$compatibleMarketplaceUpdates = array_filter(
+    $marketplaceUpdates,
+    static fn (mixed $row): bool => is_array($row) && !empty($row['coreCompatible']),
+);
+$incompatibleUpdateCount = count($marketplaceUpdates) - count($compatibleMarketplaceUpdates);
+?>
+<?php if ($compatibleMarketplaceUpdates !== []): ?>
     <p class="flash flash--info" role="status">
-        <?php echo $e($t('admin.plugins.marketplace.updates_available', ['count' => (string) count($marketplaceUpdates)])) ?>
+        <?php echo $e($t('admin.plugins.marketplace.updates_available', ['count' => (string) count($compatibleMarketplaceUpdates)])) ?>
+        · <a href="<?php echo $e($basePath) ?>/admin/plugins/marketplace"><?php echo $e($t('admin.plugins.marketplace.link')) ?></a>
+    </p>
+<?php endif; ?>
+<?php if ($incompatibleUpdateCount > 0): ?>
+    <p class="flash flash--error" role="alert">
+        <?php echo $e($t('admin.plugins.marketplace.updates_incompatible', [
+            'count' => (string) $incompatibleUpdateCount,
+            'core' => (string) ($coreVersion ?? \Nexis\Plugin\PluginCoreCompatibility::coreVersion()),
+        ])) ?>
         · <a href="<?php echo $e($basePath) ?>/admin/plugins/marketplace"><?php echo $e($t('admin.plugins.marketplace.link')) ?></a>
     </p>
 <?php endif; ?>
@@ -191,6 +207,10 @@ $cmsUpdate = is_array($cmsUpdate ?? null) ? $cmsUpdate : null;
                         ? (string) $meta['path']
                         : '';
                     $phpOk = $phpReq === '' || \Nexis\Plugin\SemVer::satisfies(PHP_VERSION, $phpReq);
+                    $coreVersionLocal = trim((string) ($coreVersion ?? \Nexis\Plugin\PluginCoreCompatibility::coreVersion()));
+                    $coreOk = $compatibleCore !== ''
+                        && $coreVersionLocal !== ''
+                        && \Nexis\Plugin\SemVer::satisfies($coreVersionLocal, $compatibleCore);
                     $licenseMissing = $license === '';
                     $hasExtra = $desc !== ''
                         || $license !== ''
@@ -200,6 +220,7 @@ $cmsUpdate = is_array($cmsUpdate ?? null) ? $cmsUpdate : null;
                         || $permissions !== ''
                         || $slots !== ''
                         || !$phpOk
+                        || !$coreOk
                         || $licenseMissing;
                     ?>
                     <tr>
@@ -218,7 +239,13 @@ $cmsUpdate = is_array($cmsUpdate ?? null) ? $cmsUpdate : null;
                                             <dd><code><?php echo $e($plugin['key']) ?></code></dd>
                                             <?php if ($compatibleCore !== ''): ?>
                                                 <dt><?php echo $e($t('admin.plugins.compatible_core')) ?></dt>
-                                                <dd><code><?php echo $e($compatibleCore) ?></code></dd>
+                                                <dd<?php echo !$coreOk ? ' class="is-warn"' : '' ?>>
+                                                    <code><?php echo $e($compatibleCore) ?></code>
+                                                    · Nexis <?php echo $e($coreVersionLocal) ?>
+                                                    <?php if (!$coreOk): ?>
+                                                        · <?php echo $e($t('admin.plugins.warn.core_short')) ?>
+                                                    <?php endif; ?>
+                                                </dd>
                                             <?php endif; ?>
                                             <dt><?php echo $e($t('admin.plugins.php')) ?></dt>
                                             <dd<?php echo !$phpOk ? ' class="is-warn"' : '' ?>>
@@ -263,8 +290,16 @@ $cmsUpdate = is_array($cmsUpdate ?? null) ? $cmsUpdate : null;
                                 <strong><?php echo $e($plugin['name']) ?></strong>
                             <?php endif; ?>
                             <div class="muted" style="margin-top:.25rem;font-size:.85rem"><code><?php echo $e($plugin['key']) ?></code></div>
-                            <?php if (!$phpOk || $licenseMissing): ?>
+                            <?php if (!$phpOk || !$coreOk || $licenseMissing): ?>
                                 <div class="plugin-warnings" role="status">
+                                    <?php if (!$coreOk && $compatibleCore !== ''): ?>
+                                        <span class="badge badge-warn" title="<?php echo $e($t('admin.plugins.warn.core', [
+                                            'core' => $coreVersionLocal,
+                                            'required' => $compatibleCore,
+                                        ])) ?>">
+                                            <?php echo $e($t('admin.plugins.warn.core_short')) ?>
+                                        </span>
+                                    <?php endif; ?>
                                     <?php if (!$phpOk): ?>
                                         <span class="badge badge-warn" title="<?php echo $e($t('admin.plugins.warn.php', [
                                             'current' => PHP_VERSION,
@@ -295,13 +330,23 @@ $cmsUpdate = is_array($cmsUpdate ?? null) ? $cmsUpdate : null;
                             <?php
                             $upd = $marketplaceUpdates[$plugin['key'] ?? ''] ?? null;
                             if (is_array($upd)):
+                                $updCoreOk = !empty($upd['coreCompatible']);
                             ?>
                                 <div class="plugin-warnings">
                                     <span class="badge badge-warn">
                                         <?php echo $e($t('admin.plugins.marketplace.update_to', ['version' => (string) ($upd['latest'] ?? '')])) ?>
                                     </span>
                                 </div>
-                                <?php if (!empty($canInstall) && ($upd['downloadUrl'] ?? null) !== null): ?>
+                                <?php if (!$updCoreOk): ?>
+                                    <div class="plugin-warnings" role="alert">
+                                        <span class="badge badge-warn" title="<?php echo $e($t('admin.plugins.marketplace.incompatible_core', [
+                                            'core' => $coreVersionLocal,
+                                            'required' => (string) ($upd['compatibleCore'] ?? '—'),
+                                        ])) ?>">
+                                            <?php echo $e($t('admin.plugins.warn.core_short')) ?>
+                                        </span>
+                                    </div>
+                                <?php elseif (!empty($canInstall) && ($upd['downloadUrl'] ?? null) !== null): ?>
                                     <form method="post" action="<?php echo $e($basePath) ?>/admin/plugins/marketplace/install" style="margin:.35rem 0 0">
                                         <input type="hidden" name="_csrf" value="<?php echo $e($csrf) ?>">
                                         <input type="hidden" name="plugin" value="<?php echo $e((string) $plugin['key']) ?>">

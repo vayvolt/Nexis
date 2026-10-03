@@ -69,8 +69,36 @@ final class FormsServiceProvider implements PluginServiceProvider
             '/admin/forms/test-mail',
             static fn ($request) => $container->get(SubmissionsController::class)->testMail($request),
         ));
+        $kernel->registerRoute(new Route(
+            'GET',
+            '/admin/forms/builder',
+            static fn ($request) => $container->get(FormsBuilderController::class)->index($request),
+        ));
+        $kernel->registerRoute(new Route(
+            'POST',
+            '/admin/forms/builder',
+            static fn ($request) => $container->get(FormsBuilderController::class)->create($request),
+        ));
+        $kernel->registerRoute(new Route(
+            'GET',
+            '/admin/forms/builder/{id}',
+            static fn ($request) => $container->get(FormsBuilderController::class)->edit($request),
+        ));
+        $kernel->registerRoute(new Route(
+            'POST',
+            '/admin/forms/builder/{id}',
+            static fn ($request) => $container->get(FormsBuilderController::class)->save($request),
+        ));
+        $kernel->registerRoute(new Route(
+            'POST',
+            '/admin/forms/builder/{id}/delete',
+            static fn ($request) => $container->get(FormsBuilderController::class)->delete($request),
+        ));
+        $kernel->registerAdminSlot('theme.head', static function (array $ctx) use ($container): string {
+            return $container->get(FormsAssets::class)->headHtml($ctx);
+        });
         $kernel->registerAdminNavSection('forms', [
-            'paths' => ['/admin/forms'],
+            'paths' => ['/admin/forms', '/admin/forms/builder'],
         ]);
         $kernel->registerAdminSlot('admin.nav', static function (array $ctx): string {
             $base = htmlspecialchars((string) ($ctx['basePath'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');

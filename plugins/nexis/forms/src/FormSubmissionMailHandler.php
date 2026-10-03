@@ -38,6 +38,13 @@ final class FormSubmissionMailHandler implements MailJobHandler
             'email' => $email,
             'message' => $message,
         ]);
+        $fields = (string) ($payload['fields'] ?? '');
+        if ($fields !== '') {
+            $body .= "\n" . $this->ui->get($locale, 'mail.form_submission.details', [
+                'form' => (string) ($payload['form'] ?? ''),
+                'fields' => $fields,
+            ]);
+        }
         $this->mail->send(new MailMessage(
             [$to],
             $this->ui->get($locale, 'mail.form_submission.subject'),

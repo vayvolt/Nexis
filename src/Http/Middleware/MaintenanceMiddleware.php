@@ -62,6 +62,10 @@ final class MaintenanceMiddleware implements MiddlewareInterface
         if (str_starts_with($path, '/admin')) {
             return true;
         }
+        // Admin-API keeps working for staff tooling; auth runs in ApiTokenAuthMiddleware.
+        if (str_starts_with($path, '/api/v1/admin')) {
+            return true;
+        }
         if (str_starts_with($path, '/assets/')) {
             return true;
         }

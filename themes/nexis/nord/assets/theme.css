@@ -232,17 +232,74 @@ a {
 .theme-nav-item {
   position: relative;
   display: inline-flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  align-items: center;
+}
+
+.theme-nav-item > a.theme-nav-parent {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.theme-nav-caret {
+  display: inline-block;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translateY(-0.1rem);
+  opacity: 0.75;
 }
 
 .theme-nav-sub {
-  display: flex;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 40;
+  min-width: 12rem;
+  display: none;
   flex-direction: column;
   gap: 0.15rem;
-  padding-left: 0.65rem;
-  border-left: 2px solid var(--color-brand-accent);
-  font-size: 0.9em;
+  padding: 0.6rem 0.45rem 0.45rem;
+  margin: 0;
+  list-style: none;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  font-size: 0.92em;
+}
+
+.theme-nav-sub::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0.4rem;
+  bottom: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--color-surface-elevated, #fff);
+  border: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
+  border-radius: var(--nord-radius-lg, 10px);
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.16);
+}
+
+.theme-nav-sub a {
+  display: block;
+  padding: 0.45rem 0.7rem;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.theme-nav-item:hover > .theme-nav-sub,
+.theme-nav-item:focus-within > .theme-nav-sub {
+  display: flex;
+}
+
+.layout-nav-right .theme-nav-item:last-child > .theme-nav-sub,
+.theme-nav .theme-nav-item:last-of-type > .theme-nav-sub {
+  left: auto;
+  right: 0;
 }
 
 .theme-main {
@@ -878,10 +935,34 @@ a {
 
   .theme-nav-item.has-children {
     width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .theme-nav-item > a.theme-nav-parent {
+    width: 100%;
   }
 
   .theme-nav-sub {
+    position: static;
+    display: flex;
+    min-width: 0;
+    margin-top: 0.25rem;
     padding: 0.15rem 0 0.25rem 0.75rem;
+    border: 0;
+    border-left: 2px solid var(--color-brand-accent);
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .theme-nav-sub::before {
+    display: none;
+  }
+
+  .theme-nav-sub a {
+    padding: 0.35rem 0.25rem;
+    white-space: normal;
   }
 
   .theme-main {

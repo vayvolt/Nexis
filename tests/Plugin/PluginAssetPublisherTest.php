@@ -24,7 +24,7 @@ final class PluginAssetPublisherTest extends TestCase
                 id: 'acme/demo',
                 name: 'Demo',
                 version: '1.0.0',
-                compatibleCore: '^0.3',
+                compatibleCore: '^0.4',
                 php: '>=8.4',
                 autoloadNamespace: 'Acme\\Demo\\',
                 providerClass: 'Acme\\Demo\\Provider',

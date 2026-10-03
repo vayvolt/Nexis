@@ -261,7 +261,6 @@ imagefilledrectangle($image, 0, 0, 319, 179, $fill);
 imagefilledrectangle($image, 24, 24, 295, 155, $accent);
 imagestring($image, 5, 90, 80, 'Nexis', $fill);
 imagepng($image, $png);
-imagedestroy($image);
 $handle = fopen($png, 'rb');
 if ($handle === false) {
     throw new RuntimeException('png read');

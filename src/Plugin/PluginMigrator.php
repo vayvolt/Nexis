@@ -41,7 +41,7 @@ final class PluginMigrator
                 throw new RuntimeException('Plugin-Migration unlesbar: ' . $file);
             }
             foreach (Migrator::splitStatements($sql) as $statement) {
-                $this->pdo->exec($statement);
+                $this->runStatement($statement);
             }
             $stmt = $this->pdo->prepare(
                 'INSERT INTO schema_migrations (version, applied_at) VALUES (:version, :applied_at)',
@@ -54,6 +54,26 @@ final class PluginMigrator
         }
 
         return $applied;
+    }
+
+    /**
+     * PDO::exec() leaves an open result set for SELECT/SHOW on unbuffered MySQL
+     * connections (HY000/2014). Drain those; use exec for DDL/DML.
+     */
+    private function runStatement(string $statement): void
+    {
+        $trimmed = ltrim($statement);
+        if (preg_match('/^(SELECT|SHOW|WITH|EXPLAIN|DESCRIBE|DESC)\b/i', $trimmed) === 1) {
+            $result = $this->pdo->query($statement);
+            if ($result !== false) {
+                $result->fetchAll();
+                $result->closeCursor();
+            }
+
+            return;
+        }
+
+        $this->pdo->exec($statement);
     }
 
     private function isApplied(string $version): bool

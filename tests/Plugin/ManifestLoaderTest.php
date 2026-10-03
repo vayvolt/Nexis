@@ -38,7 +38,7 @@ final class ManifestLoaderTest extends TestCase
                 'id' => 'acme/shop',
                 'name' => 'Shop',
                 'version' => '1.0.0',
-                'compatibleCore' => '^0.3',
+                'compatibleCore' => '^0.4',
                 'autoload' => 'Acme\\Shop\\',
                 'provider' => 'Acme\\Shop\\ShopServiceProvider',
                 'requires' => ['plugins' => ['nexis/catalog', 'nexis/forms']],

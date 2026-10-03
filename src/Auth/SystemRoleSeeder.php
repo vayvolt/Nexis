@@ -10,6 +10,8 @@ use PDO;
 
 /**
  * Ensures out-of-the-box system roles and their default permission grants for a site.
+ * Default grants apply only when a role is newly created (or always for admin core keys),
+ * so the Roles matrix can customize editor/SEO/member without being overwritten.
  */
 final class SystemRoleSeeder
 {
@@ -28,27 +30,16 @@ final class SystemRoleSeeder
 
         $memberId = '';
         foreach (SystemRoleTemplates::all() as $template) {
-            $roleId = $this->ensureRole($siteId, $template['slug'], $template['name']);
-            if ($template['permissions'] !== []) {
+            [$roleId, $created] = $this->ensureRole($siteId, $template['slug'], $template['name']);
+
+            if ($template['slug'] === RoleSlug::ADMIN) {
+                // Admin always receives the full core set (new core keys after upgrades).
+                $this->permissions->grantRole($roleId, Permission::core());
+            } elseif ($created && $template['permissions'] !== []) {
                 $this->permissions->grantRole($roleId, $template['permissions']);
             }
 
-            if ($template['slug'] === RoleSlug::EDITOR) {
-                $this->permissions->revokeRole($roleId, [
-                    Permission::CONTENT_PAGE_PUBLISH,
-                    Permission::THEME_MANAGE,
-                    Permission::THEME_CUSTOM_CSS,
-                    Permission::AUDIT_VIEW,
-                    Permission::PLUGIN_MANAGE,
-                    Permission::PLUGIN_INSTALL,
-                    Permission::SETTINGS_MANAGE,
-                    Permission::USERS_MANAGE,
-                    Permission::WEBHOOKS_MANAGE,
-                    Permission::EXPORT_MANAGE,
-                ]);
-            }
-
-            if ($template['slug'] === RoleSlug::SEO) {
+            if ($created && $template['slug'] === RoleSlug::SEO) {
                 $extras = [];
                 foreach (SystemRoleTemplates::seoPluginExtras() as $key) {
                     if ($this->permissionKeyExists($key)) {
@@ -66,6 +57,26 @@ final class SystemRoleSeeder
         }
 
         return $memberId;
+    }
+
+    /**
+     * Re-apply template defaults for all system roles (Roles matrix “reset”).
+     */
+    public function resetToTemplates(SiteId $siteId): void
+    {
+        $this->permissions->ensurePermissions(Permission::core());
+        foreach (SystemRoleTemplates::all() as $template) {
+            [$roleId] = $this->ensureRole($siteId, $template['slug'], $template['name']);
+            $keys = $template['permissions'];
+            if ($template['slug'] === RoleSlug::SEO) {
+                foreach (SystemRoleTemplates::seoPluginExtras() as $key) {
+                    if ($this->permissionKeyExists($key)) {
+                        $keys[] = $key;
+                    }
+                }
+            }
+            $this->permissions->setRolePermissions($roleId, $keys);
+        }
     }
 
     /**
@@ -111,7 +122,10 @@ final class SystemRoleSeeder
         return $table !== false && $table->fetch() !== false;
     }
 
-    private function ensureRole(SiteId $siteId, string $slug, string $name): string
+    /**
+     * @return array{0: string, 1: bool} role id, whether newly created
+     */
+    private function ensureRole(SiteId $siteId, string $slug, string $name): array
     {
         $stmt = $this->pdo->prepare(
             'SELECT id FROM roles
@@ -131,7 +145,7 @@ final class SystemRoleSeeder
                 'id' => $id,
             ]);
 
-            return $id;
+            return [$id, false];
         }
 
         $id = Uuid::v7();
@@ -149,7 +163,7 @@ final class SystemRoleSeeder
             'updated_at' => $now,
         ]);
 
-        return $id;
+        return [$id, true];
     }
 
     private function permissionKeyExists(string $key): bool

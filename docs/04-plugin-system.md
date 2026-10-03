@@ -91,7 +91,7 @@ Provider dürfen den Kernel nicht ersetzen und keine anderen Provider instantiie
 
 ## 4.5 Permissions
 
-Core-Rechte stehen nur in `Nexis\Auth\Permission` (`core()` / `editorDefaults()` / `seoDefaults()`). System-Rollen werden über `SystemRoleSeeder` / `SystemRoleTemplates` angelegt (Website-Admin, Redakteur, SEO, Mitglied). Plugin-Rechte kommen aus:
+Core-Rechte stehen nur in `Nexis\Auth\Permission` (`core()` / `editorDefaults()` / `seoDefaults()`). System-Rollen werden über `SystemRoleSeeder` / `SystemRoleTemplates` angelegt (Website-Admin, Redakteur, SEO, Mitglied); Anpassungen laufen über die Admin-Matrix `/admin/roles`. Plugin-Rechte kommen aus:
 
 1. Manifest `provides.permissions` (beim Boot automatisch registriert; Ziel-Rollen über `provides.permissionRoles`, Default `admin` + `editor`), oder
 2. Hook `$kernel->registerPermissions(['acme/thing.manage'], ['admin', 'editor'])` im Provider.
@@ -216,7 +216,7 @@ Im **öffentlichen Git-Repo** (Soft Launch) sind u. a. geliefert:
 
 | Plugin | Rolle |
 |---|---|
-| `nexis/forms` | Kontaktformular, Submissions, Mail-Notify |
+| `nexis/forms` | Formular-Builder (Felder + Bedingungen), Kontaktblock, Submissions, Mail-Notify |
 | `nexis/redirects` | Redirects + 404-Protokoll |
 | `nexis/consent` | Consent-Banner, Google Consent Mode |
 | `nexis/blog` | Beiträge (`type=post`), Archiv, Listen-Block |

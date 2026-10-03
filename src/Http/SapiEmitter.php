@@ -8,6 +8,8 @@ use Psr\Http\Message\ResponseInterface;
 
 final class SapiEmitter
 {
+    private const CHUNK_BYTES = 262144;
+
     public function emit(ResponseInterface $response, string $method = 'GET'): void
     {
         $status = $response->getStatusCode();
@@ -25,6 +27,19 @@ final class SapiEmitter
             return;
         }
 
-        echo (string) $response->getBody();
+        // Chunked so that file-backed bodies (backup archives, dumps) never have
+        // to fit into memory as one string.
+        $body = $response->getBody();
+        if ($body->isSeekable()) {
+            $body->rewind();
+        }
+        if (!$body->isReadable()) {
+            echo (string) $body;
+
+            return;
+        }
+        while (!$body->eof()) {
+            echo $body->read(self::CHUNK_BYTES);
+        }
     }
 }

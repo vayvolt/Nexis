@@ -14,13 +14,18 @@ use Nexis\Http\ResponseFactory;
 use Nexis\Http\ViewRenderer;
 use Nexis\I18n\AdminUi;
 use Nexis\Media\MediaRepository;
+use Nexis\Plugin\MarketplaceClient;
 use Nexis\Site\Site;
 use Nexis\Site\SiteRepository;
 use Nexis\Theme\ThemeCatalog;
 use Nexis\Theme\ThemeDiscovery;
+use Nexis\Theme\ThemePackageInstaller;
 use Nexis\Theme\ThemeService;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Log\LoggerInterface;
+use RuntimeException;
+use Throwable;
 
 final class ThemeAdminController
 {
@@ -50,10 +55,13 @@ final class ThemeAdminController
         private ThemeService $themes,
         private ThemeDiscovery $discovery,
         private ThemeCatalog $catalog,
+        private ThemePackageInstaller $installer,
+        private MarketplaceClient $marketplace,
         private MediaRepository $media,
         private PageCache $cache,
         private AuditLogger $audit,
         private AdminUi $ui,
+        private ?LoggerInterface $logger = null,
     ) {
     }
 
@@ -69,6 +77,37 @@ final class ThemeAdminController
         $resolved = $this->themes->resolveFor($site, $basePath);
         $overrides = $this->catalog->overrides($site->id);
 
+        $notice = '';
+        if (RequestInput::query($request, 'saved') === '1') {
+            $notice = $this->ui->get($user, 'admin.common.saved');
+        } elseif (RequestInput::query($request, 'installed') === '1') {
+            $themeKey = RequestInput::query($request, 'theme', '');
+            $notice = $themeKey !== ''
+                ? $this->ui->get($user, 'admin.theme.notice.installed', ['theme' => $themeKey])
+                : $this->ui->get($user, 'admin.theme.notice.installed_plain');
+        }
+
+        $marketplaceUpdates = [];
+        if ($this->marketplace->configured()) {
+            $localThemes = [];
+            foreach ($this->discovery->discover() as $manifest) {
+                if ($manifest->id !== '' && $manifest->version !== '') {
+                    $localThemes[$manifest->id] = $manifest->version;
+                }
+            }
+            try {
+                $check = $this->marketplace->checkForUpdates([], [
+                    'install_id' => $site->id->value,
+                    'php' => PHP_VERSION,
+                    'db' => '',
+                    'locale' => $site->defaultLocale,
+                ], false, $localThemes);
+                $marketplaceUpdates = $check['themes'] ?? [];
+            } catch (Throwable $e) {
+                $this->logger?->warning('Theme marketplace update check failed', ['exception' => $e->getMessage()]);
+            }
+        }
+
         return $this->responses->html($this->views->render('admin.theme.index', [
             'user' => $user,
             'site' => $site,
@@ -80,8 +119,138 @@ final class ThemeAdminController
             'logoMedia' => $this->logoMediaCatalog($site, $basePath),
             'basePath' => $basePath,
             'csrf' => (string) $request->getAttribute('csrf', ''),
-            'notice' => RequestInput::query($request, 'saved') === '1' ? $this->ui->get($user, 'admin.common.saved') : '',
+            'notice' => $notice,
+            'marketplaceConfigured' => $this->marketplace->configured(),
+            'marketplaceUrl' => $this->marketplace->baseUrl(),
+            'marketplaceUpdates' => $marketplaceUpdates,
         ], 'admin.layout'));
+    }
+
+    public function marketplace(ServerRequestInterface $request): ResponseInterface
+    {
+        $ctx = $this->context($request);
+        if ($ctx instanceof ResponseInterface) {
+            return $ctx;
+        }
+        [$user, $site, $basePath] = $ctx;
+        if (!$this->policy->can($user, $site, Permission::THEME_MANAGE)) {
+            return $this->responses->html($this->ui->get($user, 'admin.error.no_access_permission', ['permission' => 'theme.manage']), 403);
+        }
+
+        $q = trim(RequestInput::query($request, 'q', ''));
+        $page = max(1, (int) RequestInput::query($request, 'page', '1'));
+        $marketplaceError = RequestInput::query($request, 'error');
+        $result = ['items' => [], 'total' => 0, 'page' => 1, 'perPage' => 20];
+        if ($this->marketplace->configured()) {
+            try {
+                $result = $this->marketplace->searchThemes($q, $page);
+            } catch (RuntimeException $e) {
+                $this->logger?->warning('Theme marketplace browse failed', ['exception' => $e->getMessage()]);
+                if ($marketplaceError === '') {
+                    $marketplaceError = $this->ui->get($user, 'admin.theme.marketplace.unreachable');
+                }
+            }
+        }
+
+        $installed = [];
+        $installedVersions = [];
+        foreach ($this->discovery->discover() as $manifest) {
+            $installed[$manifest->id] = 'installed';
+            $installedVersions[$manifest->id] = $manifest->version;
+        }
+
+        return $this->responses->html($this->views->render('admin.theme.marketplace', [
+            'user' => $user,
+            'site' => $site,
+            'basePath' => $basePath,
+            'csrf' => (string) $request->getAttribute('csrf', ''),
+            'canInstall' => $this->policy->can($user, $site, Permission::THEME_MANAGE),
+            'configured' => $this->marketplace->configured(),
+            'marketplaceUrl' => $this->marketplace->baseUrl(),
+            'q' => $q,
+            'result' => $result,
+            'installed' => $installed,
+            'installedVersions' => $installedVersions,
+            'marketplaceError' => $marketplaceError,
+        ], 'admin.layout'));
+    }
+
+    public function installFromMarketplace(ServerRequestInterface $request): ResponseInterface
+    {
+        $ctx = $this->context($request);
+        if ($ctx instanceof ResponseInterface) {
+            return $ctx;
+        }
+        [$user, $site, $basePath] = $ctx;
+        if (!$this->policy->can($user, $site, Permission::THEME_MANAGE)) {
+            return $this->responses->html($this->ui->get($user, 'admin.error.no_access_permission', ['permission' => 'theme.manage']), 403);
+        }
+        if (!$this->marketplace->configured()) {
+            return $this->responses->redirect($basePath . '/admin/theme/marketplace?error=' . rawurlencode(
+                $this->ui->get($user, 'admin.theme.marketplace.not_configured'),
+            ));
+        }
+
+        $slug = trim(RequestInput::string($request, 'theme'));
+        $overwrite = RequestInput::string($request, 'overwrite') === '1';
+        if ($slug === '' || !str_contains($slug, '/')) {
+            return $this->responses->redirect($basePath . '/admin/theme/marketplace?error=' . rawurlencode(
+                $this->ui->get($user, 'admin.theme.marketplace.invalid_theme'),
+            ));
+        }
+
+        try {
+            $detail = $this->marketplace->theme($slug);
+            if ($detail === null) {
+                return $this->responses->redirect($basePath . '/admin/theme/marketplace?error=' . rawurlencode(
+                    $this->ui->get($user, 'admin.theme.marketplace.not_found'),
+                ));
+            }
+            $latest = is_array($detail['latest'] ?? null) ? $detail['latest'] : [];
+            $version = (string) ($latest['version'] ?? '');
+            $expectedSha = (string) ($latest['packageSha256'] ?? '');
+            if ($version === '' || ($latest['downloadUrl'] ?? null) === null) {
+                return $this->responses->redirect($basePath . '/admin/theme/marketplace?error=' . rawurlencode(
+                    $this->ui->get($user, 'admin.theme.marketplace.no_package'),
+                ));
+            }
+
+            $tmp = tempnam(sys_get_temp_dir(), 'nexis-thm-');
+            if ($tmp === false) {
+                return $this->responses->redirect($basePath . '/admin/theme/marketplace?error=' . rawurlencode(
+                    $this->ui->get($user, 'admin.error.plugins_temp_failed'),
+                ));
+            }
+            $zipPath = $tmp . '.zip';
+            rename($tmp, $zipPath);
+
+            try {
+                $sha = $this->marketplace->downloadThemeRelease($slug, $version, $zipPath);
+                if ($expectedSha !== '' && !hash_equals($expectedSha, $sha)) {
+                    throw new RuntimeException($this->ui->get($user, 'admin.theme.marketplace.checksum_mismatch'));
+                }
+                $result = $this->installer->installFromZip($zipPath, $overwrite);
+                $this->themes->sync();
+                $this->audit->log('theme.marketplace.installed', $site->id, $user->id, 'theme', null, [
+                    'theme' => $result['manifest']->id,
+                    'version' => $result['manifest']->version,
+                    'source' => 'marketplace',
+                ]);
+
+                return $this->responses->redirect(
+                    $basePath . '/admin/theme?installed=1&theme=' . rawurlencode($result['manifest']->id) . '#theme',
+                );
+            } finally {
+                @unlink($zipPath);
+            }
+        } catch (Throwable $e) {
+            $this->logger?->warning('Theme marketplace install failed', [
+                'theme' => $slug,
+                'exception' => $e->getMessage(),
+            ]);
+
+            return $this->responses->redirect($basePath . '/admin/theme/marketplace?error=' . rawurlencode($e->getMessage()));
+        }
     }
 
     public function activate(ServerRequestInterface $request): ResponseInterface

@@ -365,7 +365,6 @@ final class MediaLibrary
                     (int) filesize($thumbPath),
                 ));
             }
-            imagedestroy($thumb);
         }
 
         // webp (skip if original already webp and small enough — still store for consistent URLs)
@@ -386,7 +385,6 @@ final class MediaLibrary
             }
         }
 
-        imagedestroy($image);
     }
 
     private function variantKey(MediaAsset $asset, string $handle, string $ext): string
@@ -416,7 +414,6 @@ final class MediaLibrary
             'image/webp' => function_exists('imagewebp') ? imagewebp($image, $absolute, 80) : imagepng($image, $absolute, 6),
             default => false,
         };
-        imagedestroy($image);
         if ($ok !== true) {
             throw new RuntimeException('media.encode');
         }

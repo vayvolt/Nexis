@@ -149,14 +149,70 @@ a { color: var(--color-brand-accent); }
 }
 
 .theme-nav-account { margin-left: 0.35rem; opacity: 0.92; }
-.theme-nav-item { display: inline-flex; flex-direction: column; gap: 0.2rem; }
+.theme-nav-item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.theme-nav-item > a.theme-nav-parent {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.theme-nav-caret {
+  display: inline-block;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translateY(-0.1rem);
+  opacity: 0.7;
+}
 .theme-nav-sub {
-  display: flex;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 40;
+  min-width: 11.5rem;
+  display: none;
   flex-direction: column;
-  gap: 0.15rem;
-  padding-left: 0.5rem;
-  border-left: 1px solid var(--color-border, #ccc);
-  font-size: 0.9em;
+  gap: 0.1rem;
+  padding: 0.55rem 0.4rem 0.4rem;
+  margin: 0;
+  list-style: none;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  font-size: 0.92em;
+}
+.theme-nav-sub::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0.35rem;
+  bottom: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--color-surface-elevated, #fff);
+  border: 1px solid var(--color-border, #ccc);
+  border-radius: 4px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.1);
+}
+.theme-nav-sub a {
+  display: block;
+  padding: 0.45rem 0.65rem;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.theme-nav-item:hover > .theme-nav-sub,
+.theme-nav-item:focus-within > .theme-nav-sub {
+  display: flex;
+}
+.layout-nav-right .theme-nav-item:last-child > .theme-nav-sub,
+.theme-nav .theme-nav-item:last-of-type > .theme-nav-sub {
+  left: auto;
+  right: 0;
 }
 
 .theme-main {
@@ -387,10 +443,34 @@ a { color: var(--color-brand-accent); }
 
   .theme-nav-item.has-children {
     width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .theme-nav-item > a.theme-nav-parent {
+    width: 100%;
   }
 
   .theme-nav-sub {
+    position: static;
+    display: flex;
+    min-width: 0;
+    margin-top: 0.25rem;
     padding: 0.15rem 0 0.25rem 0.75rem;
+    border: 0;
+    border-left: 1px solid var(--color-border, #ccc);
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .theme-nav-sub::before {
+    display: none;
+  }
+
+  .theme-nav-sub a {
+    padding: 0.35rem 0.25rem;
+    white-space: normal;
   }
 
   .theme-main {

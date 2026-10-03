@@ -388,7 +388,7 @@
         $navClass = static function (string $key) use ($activeAdminNav): string {
             return $activeAdminNav === $key ? ' class="is-active"' : '';
         };
-        $systemOpen = in_array($activeAdminNav, ['users', 'plugins', 'audit', 'mail', 'logs', 'health', 'webhooks', 'export', 'security', 'about'], true);
+        $systemOpen = in_array($activeAdminNav, ['users', 'roles', 'plugins', 'audit', 'mail', 'logs', 'health', 'webhooks', 'api_tokens', 'export', 'backups', 'security', 'about'], true);
         ?>
         <div class="admin-nav-shell" data-admin-nav>
             <button type="button" class="admin-nav-burger" data-admin-nav-toggle aria-expanded="false" aria-controls="admin-main-nav">
@@ -419,13 +419,16 @@
                     <summary<?php echo $systemOpen ? ' class="is-active"' : '' ?>><?php echo $e($t('admin.nav.system')) ?></summary>
                     <div class="admin-nav-drop__panel">
                         <a href="<?php echo $e($basePath) ?>/admin/users"<?php echo $navClass('users') ?>><?php echo $e($t('admin.nav.users')) ?></a>
+                        <a href="<?php echo $e($basePath) ?>/admin/roles"<?php echo $navClass('roles') ?>><?php echo $e($t('admin.nav.roles')) ?></a>
                         <a href="<?php echo $e($basePath) ?>/admin/plugins"<?php echo $navClass('plugins') ?>><?php echo $e($t('admin.nav.plugins')) ?></a>
                         <a href="<?php echo $e($basePath) ?>/admin/audit"<?php echo $navClass('audit') ?>><?php echo $e($t('admin.nav.audit')) ?></a>
                         <a href="<?php echo $e($basePath) ?>/admin/mail"<?php echo $navClass('mail') ?>><?php echo $e($t('admin.nav.mail')) ?></a>
                         <a href="<?php echo $e($basePath) ?>/admin/logs"<?php echo $navClass('logs') ?>><?php echo $e($t('admin.nav.logs')) ?></a>
                         <a href="<?php echo $e($basePath) ?>/admin/health"<?php echo $navClass('health') ?>><?php echo $e($t('admin.nav.health')) ?></a>
                         <a href="<?php echo $e($basePath) ?>/admin/webhooks"<?php echo $navClass('webhooks') ?>><?php echo $e($t('admin.nav.webhooks')) ?></a>
+                        <a href="<?php echo $e($basePath) ?>/admin/api-tokens"<?php echo $navClass('api_tokens') ?>><?php echo $e($t('admin.nav.api_tokens')) ?></a>
                         <a href="<?php echo $e($basePath) ?>/admin/export"<?php echo $navClass('export') ?>><?php echo $e($t('admin.nav.export')) ?></a>
+                        <a href="<?php echo $e($basePath) ?>/admin/backups"<?php echo $navClass('backups') ?>><?php echo $e($t('admin.nav.backups')) ?></a>
                         <a href="<?php echo $e($basePath) ?>/admin/security"<?php echo $navClass('security') ?>><?php echo $e($t('admin.nav.security')) ?></a>
                         <a href="<?php echo $e($basePath) ?>/admin/about"<?php echo $navClass('about') ?>><?php echo $e($t('admin.nav.about')) ?></a>
                     </div>

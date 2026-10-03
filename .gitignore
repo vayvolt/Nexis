@@ -27,9 +27,11 @@
 Thumbs.db
 Desktop.ini
 
-# Local-only plugin (not published with the public repo)
+# Local-only plugins (not published with the public repo / release)
 /plugins/nexis/workshop/
 /tests/Plugin/Workshop*.php
+/plugins/nexis/experiments/
+/tests/Plugins/Experiments/
 
 # Local fixture for admin plugin warning badges
 /plugins/acme/warnings/

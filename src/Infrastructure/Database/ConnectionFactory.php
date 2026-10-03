@@ -19,11 +19,7 @@ final class ConnectionFactory
 
         $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', $host, $port, $database);
 
-        return new PDO($dsn, $username, $password, [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false,
-        ]);
+        return new PDO($dsn, $username, $password, self::mysqlOptions());
     }
 
     /**
@@ -38,11 +34,7 @@ final class ConnectionFactory
 
         $dsn = sprintf('mysql:host=%s;port=%s;charset=utf8mb4', $host, $port);
 
-        return new PDO($dsn, $username, $password, [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false,
-        ]);
+        return new PDO($dsn, $username, $password, self::mysqlOptions());
     }
 
     public static function ensureDatabase(Config $config): void
@@ -55,5 +47,26 @@ final class ConnectionFactory
         $pdo->exec(
             'CREATE DATABASE IF NOT EXISTS `' . $database . '` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci',
         );
+    }
+
+    /**
+     * @return array<int, mixed>
+     */
+    private static function mysqlOptions(): array
+    {
+        $options = [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+        ];
+
+        // PHP 8.5 deprecates PDO::MYSQL_* driver constants in favour of Pdo\Mysql::*.
+        if (\PHP_VERSION_ID >= 80500) {
+            $options[\Pdo\Mysql::ATTR_USE_BUFFERED_QUERY] = true;
+        } else {
+            $options[PDO::MYSQL_ATTR_USE_BUFFERED_QUERY] = true;
+        }
+
+        return $options;
     }
 }

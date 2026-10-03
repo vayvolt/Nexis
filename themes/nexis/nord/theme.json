@@ -2,7 +2,7 @@
   "id": "nexis/nord",
   "name": "Nord",
   "version": "1.2.0",
-  "compatibleCore": "^0.3",
+  "compatibleCore": "^0.4",
   "slots": ["header", "footer", "after-content", "admin.preview-chrome"],
   "templates": {
     "page": "templates/page.twig",

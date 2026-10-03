@@ -36,13 +36,38 @@ $themeTabs = [
         aria-labelledby="theme-tab-theme"
     >
         <p class="muted"><?php echo $e($t('admin.theme.active_hint')) ?></p>
+        <?php
+        /** @var array<string, array{installed: string, latest: string, downloadUrl: string|null}> $marketplaceUpdates */
+        $marketplaceUpdates = is_array($marketplaceUpdates ?? null) ? $marketplaceUpdates : [];
+        ?>
+        <?php if ($marketplaceUpdates !== []): ?>
+            <p class="flash" role="status">
+                <?php echo $e($t('admin.theme.marketplace.updates_available', ['count' => (string) count($marketplaceUpdates)])) ?>
+                · <a href="<?php echo $e($basePath) ?>/admin/theme/marketplace"><?php echo $e($t('admin.theme.marketplace.link')) ?></a>
+            </p>
+        <?php endif; ?>
+        <?php if (!empty($marketplaceConfigured)): ?>
+            <p style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+                <a class="btn btn-small" href="<?php echo $e($basePath) ?>/admin/theme/marketplace"><?php echo $e($t('admin.theme.marketplace.link')) ?></a>
+                <?php if (($marketplaceUrl ?? '') !== ''): ?>
+                    <a class="btn btn-small" href="<?php echo $e((string) $marketplaceUrl) ?>/themes" target="_blank" rel="noopener"><?php echo $e($t('admin.theme.marketplace.open_directory')) ?></a>
+                <?php endif; ?>
+            </p>
+        <?php endif; ?>
         <form method="post" action="<?php echo $e($basePath) ?>/admin/theme/activate">
             <input type="hidden" name="_csrf" value="<?php echo $e($csrf) ?>">
             <label for="theme">Theme</label>
             <select id="theme" name="theme">
                 <?php foreach ($themes as $theme): ?>
+                    <?php
+                    $upd = $marketplaceUpdates[$theme->id] ?? null;
+                    $label = $theme->name . ' (' . $theme->id . ($theme->extends ? ' · extends ' . $theme->extends : '') . ')';
+                    ?>
                     <option value="<?php echo $e($theme->id) ?>" <?php echo $theme->id === $activeTheme ? 'selected' : '' ?>>
-                        <?php echo $e($theme->name) ?> (<?php echo $e($theme->id) ?><?php echo $theme->extends ? ' · extends ' . $e($theme->extends) : '' ?>)
+                        <?php echo $e($label) ?>
+                        <?php if ($upd !== null): ?>
+                            — <?php echo $e($t('admin.theme.marketplace.update_to', ['version' => (string) ($upd['latest'] ?? '')])) ?>
+                        <?php endif; ?>
                     </option>
                 <?php endforeach; ?>
             </select>

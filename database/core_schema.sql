@@ -507,4 +507,24 @@ CREATE TABLE mail_log (
     KEY idx_mail_log_site (site_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE api_tokens (
+    id           CHAR(36)     NOT NULL,
+    site_id      CHAR(36)     NOT NULL,
+    user_id      CHAR(36)     NOT NULL,
+    name         VARCHAR(120) NOT NULL,
+    token_prefix VARCHAR(16)  NOT NULL,
+    token_hash   CHAR(64)     NOT NULL,
+    scopes_json  TEXT         NOT NULL,
+    last_used_at DATETIME(3)  NULL,
+    expires_at   DATETIME(3)  NULL,
+    revoked_at   DATETIME(3)  NULL,
+    created_at   DATETIME(3)  NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_api_tokens_hash (token_hash),
+    KEY idx_api_tokens_site (site_id),
+    KEY idx_api_tokens_user (user_id),
+    CONSTRAINT fk_api_tokens_site FOREIGN KEY (site_id) REFERENCES sites (id) ON DELETE CASCADE,
+    CONSTRAINT fk_api_tokens_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;

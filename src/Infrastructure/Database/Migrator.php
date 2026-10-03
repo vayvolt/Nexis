@@ -57,6 +57,7 @@ final class Migrator
             $this->ensureSoftDeletedPagePaths();
             $this->ensureWorkflowPermissions();
             $this->ensureSystemRoleTemplates();
+            $this->ensureApiTokensTable();
 
             return $applied;
         }
@@ -79,8 +80,75 @@ final class Migrator
         $this->ensureSoftDeletedPagePaths();
         $this->ensureWorkflowPermissions();
         $this->ensureSystemRoleTemplates();
+        $this->ensureApiTokensTable();
 
         return $applied;
+    }
+
+    /**
+     * API tokens for the Admin-API (`Authorization: Bearer nx_…`).
+     */
+    private function ensureApiTokensTable(): void
+    {
+        $driver = (string) $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        if ($driver === 'sqlite') {
+            $exists = $this->pdo->query(
+                "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'api_tokens' LIMIT 1",
+            );
+            if ($exists !== false && $exists->fetchColumn() !== false) {
+                return;
+            }
+            $this->pdo->exec(
+                'CREATE TABLE api_tokens (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    site_id TEXT NOT NULL,
+                    user_id TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    token_prefix TEXT NOT NULL,
+                    token_hash TEXT NOT NULL,
+                    scopes_json TEXT NOT NULL,
+                    last_used_at TEXT NULL,
+                    expires_at TEXT NULL,
+                    revoked_at TEXT NULL,
+                    created_at TEXT NOT NULL
+                )',
+            );
+            $this->pdo->exec('CREATE UNIQUE INDEX uq_api_tokens_hash ON api_tokens (token_hash)');
+            $this->pdo->exec('CREATE INDEX idx_api_tokens_site ON api_tokens (site_id)');
+            $this->pdo->exec('CREATE INDEX idx_api_tokens_user ON api_tokens (user_id)');
+
+            return;
+        }
+
+        $table = $this->pdo->query("SHOW TABLES LIKE 'api_tokens'");
+        if ($table !== false && $table->fetch() !== false) {
+            return;
+        }
+        $sites = $this->pdo->query("SHOW TABLES LIKE 'sites'");
+        if ($sites === false || $sites->fetch() === false) {
+            return;
+        }
+        $this->pdo->exec(
+            'CREATE TABLE api_tokens (
+                id           CHAR(36)     NOT NULL,
+                site_id      CHAR(36)     NOT NULL,
+                user_id      CHAR(36)     NOT NULL,
+                name         VARCHAR(120) NOT NULL,
+                token_prefix VARCHAR(16)  NOT NULL,
+                token_hash   CHAR(64)     NOT NULL,
+                scopes_json  TEXT         NOT NULL,
+                last_used_at DATETIME(3)  NULL,
+                expires_at   DATETIME(3)  NULL,
+                revoked_at   DATETIME(3)  NULL,
+                created_at   DATETIME(3)  NOT NULL,
+                PRIMARY KEY (id),
+                UNIQUE KEY uq_api_tokens_hash (token_hash),
+                KEY idx_api_tokens_site (site_id),
+                KEY idx_api_tokens_user (user_id),
+                CONSTRAINT fk_api_tokens_site FOREIGN KEY (site_id) REFERENCES sites (id) ON DELETE CASCADE,
+                CONSTRAINT fk_api_tokens_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci',
+        );
     }
 
     private function ensureMediaFolderColumn(): void
@@ -461,7 +529,7 @@ final class Migrator
 
         try {
             foreach (self::splitStatements($sql) as $statement) {
-                $this->pdo->exec($statement);
+                $this->runStatement($statement);
             }
             if ($useTransaction) {
                 $this->pdo->commit();
@@ -472,6 +540,25 @@ final class Migrator
             }
             throw $exception;
         }
+    }
+
+    /**
+     * Drain SELECT/SHOW result sets so MySQL unbuffered connections stay usable.
+     */
+    private function runStatement(string $statement): void
+    {
+        $trimmed = ltrim($statement);
+        if (preg_match('/^(SELECT|SHOW|WITH|EXPLAIN|DESCRIBE|DESC)\b/i', $trimmed) === 1) {
+            $result = $this->pdo->query($statement);
+            if ($result !== false) {
+                $result->fetchAll();
+                $result->closeCursor();
+            }
+
+            return;
+        }
+
+        $this->pdo->exec($statement);
     }
 
     private function markApplied(string $version): void

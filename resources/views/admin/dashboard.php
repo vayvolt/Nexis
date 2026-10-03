@@ -50,7 +50,9 @@ $contentLocale = (string) ($locale ?? $site->defaultLocale);
             <a class="btn btn-small" href="<?php echo $e($basePath) ?>/admin/logs"><?php echo $e($t('admin.nav.logs')) ?></a>
             <a class="btn btn-small" href="<?php echo $e($basePath) ?>/admin/health"><?php echo $e($t('admin.nav.health')) ?></a>
             <a class="btn btn-small" href="<?php echo $e($basePath) ?>/admin/webhooks"><?php echo $e($t('admin.nav.webhooks')) ?></a>
+            <a class="btn btn-small" href="<?php echo $e($basePath) ?>/admin/api-tokens"><?php echo $e($t('admin.nav.api_tokens')) ?></a>
             <a class="btn btn-small" href="<?php echo $e($basePath) ?>/admin/export"><?php echo $e($t('admin.nav.export')) ?></a>
+            <a class="btn btn-small" href="<?php echo $e($basePath) ?>/admin/backups"><?php echo $e($t('admin.nav.backups')) ?></a>
             <a class="btn btn-small" href="<?php echo $e($basePath) ?>/admin/security"><?php echo $e($t('admin.nav.security')) ?></a>
             <a class="btn btn-small" href="<?php echo $e($basePath) ?>/admin/about"><?php echo $e($t('admin.nav.about')) ?></a>
         </p>

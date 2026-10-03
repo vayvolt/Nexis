@@ -1,4 +1,4 @@
-# Go-Live-Checkliste (Nexis 0.3)
+# Go-Live-Checkliste (Nexis 0.4)
 
 Vor dem öffentlichen Betrieb abhaken. Details: [Sicherheit und Betrieb](../06-sicherheit-und-betrieb.md), [nginx](nginx.conf.example), [Queue](queue.md), [Restore](restore.md).
 
@@ -25,7 +25,8 @@ Vor dem öffentlichen Betrieb abhaken. Details: [Sicherheit und Betrieb](../06-s
 - [ ] Admin-Passwort stark; 2FA unter `/admin/security` aktiv
 - [ ] Optional: `PLUGIN_TRUST_PUBLIC_KEY` setzen, wenn nur signierte Plugin-ZIPs erlaubt sein sollen
 - [ ] Consent/GA: CSP wird automatisch erweitert, wenn Google-IDs konfiguriert sind
-- [ ] Backup-Job eingerichtet (`php bin/backup.php`); Restore einmal getestet
+- [ ] Backup-Job eingerichtet: Planer unter `/admin/backups` aktiviert (läuft mit `php bin/queue-work.php`) **oder** Cron auf `php bin/backup.php --scheduled`; Restore einmal getestet (`php bin/restore.php --latest --yes` auf Staging)
+- [ ] Vor CMS-ZIP-Update immer Backup; bei Fehlern Restore, nicht „weiterprobieren“
 
 ## Smoke-Test
 
@@ -37,9 +38,11 @@ Vor dem öffentlichen Betrieb abhaken. Details: [Sicherheit und Betrieb](../06-s
 - [ ] `/health` → DB, `storage` und Queue-Status ok
 - [ ] Optional: Admin → System → Health prüfen (Queue-Tiefe, Disk, PHP)
 
-## Scope 0.3 (ehrlich kommunizieren)
+## Scope 0.4
 
-- HTML-Admin-CMS mit Themes (Atelier, Editorial, Nord) und First-Party-Plugins
+- HTML-Admin-CMS mit Themes (Atelier, Editorial, Nord, …) und First-Party-Plugins
 - Admin-/Public-GUI-i18n (de/en); Listen mit Übersetzungsgruppen; Menüs mit Locale-Tabs
-- **Keine** öffentliche REST-API / API-Tokens in 0.3 (siehe [07 API](../07-api-und-schnittstellen.md))
-- Plugin-Marktplatz / Bezahlplugins: nicht Bestandteil
+- REST-API / API-Tokens: lesend + schreibend (Public + Admin), Tokens unter `/admin/api-tokens` (siehe [07 API](../07-api-und-schnittstellen.md)); CORS für Browser-Clients optional offen
+- Backups unter `/admin/backups` (Planer, Download); Restore derzeit CLI (`php bin/restore.php`)
+- Rollen-Matrix unter `/admin/roles`; Formular-Builder in `nexis/forms`
+- Plugin-/Theme-Marktplatz (freie Pakete); Bezahlplugins: nicht Bestandteil
