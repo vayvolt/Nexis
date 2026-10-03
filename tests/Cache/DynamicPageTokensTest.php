@@ -8,17 +8,23 @@ use Nexis\Cache\DynamicPageTokens;
 use Nexis\I18n\PublicUi;
 use Nexis\I18n\Translator;
 use Nexis\Plugins\Forms\ContactFormBlock;
+use Nexis\Plugins\Forms\FormDefinitionStore;
+use Nexis\Site\SiteRepository;
+use PDO;
 use PHPUnit\Framework\TestCase;
 
 final class DynamicPageTokensTest extends TestCase
 {
     protected function setUp(): void
     {
-        $matches = glob(dirname(__DIR__, 2) . '/plugins/*/forms/src/ContactFormBlock.php') ?: [];
-        if ($matches === []) {
-            self::markTestSkipped('Forms plugin not installed under plugins/*/forms');
+        $dir = dirname(__DIR__, 2) . '/plugins/nexis/forms/src';
+        if (!is_file($dir . '/ContactFormBlock.php')) {
+            self::markTestSkipped('Forms plugin not installed under plugins/nexis/forms');
         }
-        require_once $matches[0];
+        require_once $dir . '/FormField.php';
+        require_once $dir . '/FormDefinition.php';
+        require_once $dir . '/FormDefinitionStore.php';
+        require_once $dir . '/ContactFormBlock.php';
     }
 
     public function testHydrateReplacesCsrfAndUniqueIdempotencyKeys(): void
@@ -85,6 +91,13 @@ final class DynamicPageTokensTest extends TestCase
             . DIRECTORY_SEPARATOR . 'forms' . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'lang',
         );
 
-        return new ContactFormBlock(new PublicUi($translator));
+        $sites = $this->createStub(SiteRepository::class);
+        $sites->method('installed')->willReturn(null);
+
+        return new ContactFormBlock(
+            new PublicUi($translator),
+            new FormDefinitionStore(new PDO('sqlite::memory:')),
+            $sites,
+        );
     }
 }
