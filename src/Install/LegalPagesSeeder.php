@@ -190,23 +190,20 @@ final class LegalPagesSeeder
                     robots: 'index,follow',
                 );
                 $this->pages->save($page);
-                if ($this->pages->findById($page->id) === null) {
+                $saved = $this->pages->findById($page->id);
+                if ($saved === null) {
                     throw new \RuntimeException('Legal page missing after insert: ' . $meta['path']);
                 }
 
-                $document = match ($spec['key']) {
-                    'imprint' => $content->imprintDocument($locale),
-                    'privacy' => $content->privacyDocument($locale),
-                    'terms' => $content->termsDocument($locale),
-                    default => throw new \LogicException('Unknown legal key: ' . $spec['key']),
-                };
-                $this->documents->save($page->id, $document, null, $actor, 'Legal-Seiten anlegen');
-                $fresh = $this->pages->findById($page->id);
-                if ($fresh === null) {
-                    throw new \RuntimeException('Legal page missing after document save: ' . $meta['path']);
-                }
-                $this->publish->publish($fresh, null, $actor, $basePath);
-                $pageIds[$locale] = $fresh;
+                $this->documents->save(
+                    $saved->id,
+                    $this->documentFor($content, (string) $spec['key'], $locale),
+                    null,
+                    $actor,
+                    'Legal-Seiten anlegen',
+                );
+                $this->publish->publish($saved, null, $actor, $basePath);
+                $pageIds[$locale] = $saved;
                 $created[] = $locale . ':' . $meta['path'];
             }
 
@@ -241,6 +238,19 @@ final class LegalPagesSeeder
         }
 
         return $out;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function documentFor(DefaultSiteContent $content, string $key, string $locale): array
+    {
+        return match ($key) {
+            'imprint' => $content->imprintDocument($locale),
+            'privacy' => $content->privacyDocument($locale),
+            'terms' => $content->termsDocument($locale),
+            default => throw new \LogicException('Unknown legal key: ' . $key),
+        };
     }
 
     private function ensureFooterLink(Site $site, string $locale, Page $page, string $label): bool
