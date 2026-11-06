@@ -7,6 +7,7 @@
   var cookieName = root.getAttribute('data-cookie') || 'nexis_consent';
   var hasAnalytics = root.getAttribute('data-has-analytics') === '1';
   var hasMarketing = root.getAttribute('data-has-marketing') === '1';
+  var tagsLoaded = false;
 
   function readCookie(name) {
     var parts = (document.cookie || '').split(';');
@@ -68,6 +69,53 @@
     });
   }
 
+  function injectScript(src, onload) {
+    var s = document.createElement('script');
+    s.async = true;
+    s.src = src;
+    if (typeof onload === 'function') {
+      s.onload = onload;
+    }
+    document.head.appendChild(s);
+  }
+
+  function loadGoogleTags(state) {
+    applyGtagConsent(state);
+    if (tagsLoaded || (!state.analytics && !state.marketing)) {
+      return;
+    }
+    var cfg = window.__nxConsentConfig || {};
+    var gtmId = cfg.gtmId || '';
+    var gaId = cfg.gaId || '';
+    var adsId = cfg.adsId || '';
+    tagsLoaded = true;
+
+    if (gtmId) {
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+      injectScript('https://www.googletagmanager.com/gtm.js?id=' + encodeURIComponent(gtmId));
+      return;
+    }
+
+    var primaryId = gaId || adsId;
+    if (!primaryId) {
+      return;
+    }
+    injectScript('https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(primaryId), function () {
+      if (typeof window.gtag !== 'function') {
+        return;
+      }
+      window.gtag('js', new Date());
+      if (gaId) {
+        window.gtag('config', gaId);
+      }
+      if (adsId) {
+        window.gtag('config', adsId);
+      }
+      applyGtagConsent(state);
+    });
+  }
+
   function syncCheckboxes(state) {
     var analyticsBox = root.querySelector('[data-nx-cat="analytics"]');
     var marketingBox = root.querySelector('[data-nx-cat="marketing"]');
@@ -79,18 +127,57 @@
     }
   }
 
-  function openSettings() {
+  var lastOpener = null;
+
+  function focusFirstAction() {
+    var btn = root.querySelector('[data-nx-consent-reject], [data-nx-consent-save], [data-nx-consent-accept], button, a');
+    if (!btn) {
+      return;
+    }
+    try {
+      btn.focus({ preventScroll: false });
+    } catch (e) {
+      try {
+        btn.focus();
+      } catch (err) {}
+    }
+  }
+
+  function restoreOpenerFocus() {
+    var opener = lastOpener;
+    lastOpener = null;
+    if (!opener || typeof opener.focus !== 'function') {
+      return;
+    }
+    try {
+      opener.focus({ preventScroll: true });
+    } catch (e) {
+      try {
+        opener.focus();
+      } catch (err) {}
+    }
+  }
+
+  function openSettings(opener) {
+    if (opener && opener.nodeType === 1) {
+      lastOpener = opener;
+    }
     var current = parseConsent(readCookie(cookieName)) || {
-      analytics: hasAnalytics,
+      analytics: false,
       marketing: false
     };
     syncCheckboxes(current);
     root.hidden = false;
     root.setAttribute('tabindex', '-1');
-    try {
-      root.focus({ preventScroll: false });
-    } catch (e) {}
     root.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    focusFirstAction();
+  }
+
+  function hideBanner(restoreFocus) {
+    root.hidden = true;
+    if (restoreFocus) {
+      restoreOpenerFocus();
+    }
   }
 
   function persist(state) {
@@ -102,8 +189,8 @@
       ts: Date.now()
     });
     writeCookie(cookieName, payload);
-    applyGtagConsent(state);
-    root.hidden = true;
+    loadGoogleTags(state);
+    hideBanner(true);
   }
 
   function readUiState(forceAll) {
@@ -126,11 +213,11 @@
 
   var existing = parseConsent(readCookie(cookieName));
   if (existing) {
-    applyGtagConsent(existing);
     syncCheckboxes(existing);
     root.hidden = true;
+    loadGoogleTags(existing);
   } else {
-    syncCheckboxes({ analytics: hasAnalytics, marketing: false });
+    syncCheckboxes({ analytics: false, marketing: false });
     root.hidden = false;
   }
 
@@ -164,7 +251,23 @@
       return;
     }
     event.preventDefault();
-    openSettings();
+    openSettings(opener);
+  });
+
+  document.addEventListener('keydown', function (event) {
+    if (event.key !== 'Escape' || root.hidden) {
+      return;
+    }
+    // First visit: Escape rejects optional cookies (banner must be dismissed somehow).
+    // Preferences reopen: Escape closes without changing the stored choice.
+    var existingConsent = parseConsent(readCookie(cookieName));
+    if (existingConsent) {
+      event.preventDefault();
+      hideBanner(true);
+      return;
+    }
+    event.preventDefault();
+    persist(readUiState(false));
   });
 
   if (window.location.hash === '#cookies' || /[?&]cookies=1(?:&|$)/.test(window.location.search)) {

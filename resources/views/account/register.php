@@ -16,6 +16,29 @@ $langQ = 'lang=' . rawurlencode($lang);
         <label for="password"><?php echo $e($t('admin.common.password')) ?></label>
         <input id="password" name="password" type="password" required minlength="8" autocomplete="new-password">
         <p class="muted"><?php echo $e($t('account.register.password_hint')) ?></p>
+        <p class="muted"><?php echo $e($t('account.register.data_minimization')) ?></p>
+        <p style="margin-top:.85rem">
+            <label style="display:flex;gap:.5rem;align-items:flex-start;font-weight:500">
+                <input type="checkbox" name="accept_legal" value="1" required style="margin-top:.2rem;width:auto">
+                <span><?php
+                    $privacyUrl = (string) ($privacyUrl ?? '');
+                    $termsUrl = (string) ($termsUrl ?? '');
+                    $privacyLabel = $t('account.register.privacy');
+                    $termsLabel = $t('account.register.terms');
+                    $privacyLink = $privacyUrl !== ''
+                        ? '<a href="' . $e($privacyUrl) . '" target="_blank" rel="noopener">' . $e($privacyLabel) . '</a>'
+                        : $e($privacyLabel);
+                    $termsLink = $termsUrl !== ''
+                        ? '<a href="' . $e($termsUrl) . '" target="_blank" rel="noopener">' . $e($termsLabel) . '</a>'
+                        : $e($termsLabel);
+                    echo str_replace(
+                        [':privacy', ':terms'],
+                        [$privacyLink, $termsLink],
+                        $e($t('account.register.accept_legal')),
+                    );
+                ?></span>
+            </label>
+        </p>
         <p style="margin-top:1rem"><button type="submit"><?php echo $e($t('account.register.submit')) ?></button></p>
     </form>
     <p class="links muted"><a href="<?php echo $e($basePath) ?>/account/login?<?php echo $e($langQ) ?>"><?php echo $e($t('account.register.have_account')) ?></a></p>

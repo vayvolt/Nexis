@@ -36,7 +36,7 @@ final class PublicUi
     /**
      * Labels for theme shell chrome (nav aria, locale switcher).
      *
-     * @return array{ariaPrimary: string, ariaLocales: string, ariaFooter: string, unavailable: string}
+     * @return array{ariaPrimary: string, ariaLocales: string, ariaFooter: string, unavailable: string, skipToContent: string}
      */
     public function themeChrome(string $locale): array
     {
@@ -45,6 +45,7 @@ final class PublicUi
             'ariaLocales' => $this->get($locale, 'theme.nav.locales'),
             'ariaFooter' => $this->get($locale, 'theme.nav.footer'),
             'unavailable' => $this->get($locale, 'theme.locale.unavailable'),
+            'skipToContent' => $this->get($locale, 'theme.nav.skip'),
         ];
     }
 

@@ -11,6 +11,7 @@ if ($query !== '') {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/svg+xml" href="<?php echo $e(\Nexis\Kernel\Nexis::brandUrl((string) ($basePath ?? ''), \Nexis\Kernel\Nexis::BRAND_ICON)) ?>">
     <title><?php echo $e($title) ?></title>
     <?php if ($themeCssUrl !== ''): ?><link rel="stylesheet" href="<?php echo $e($themeCssUrl) ?>"><?php endif; ?>
     <style><?php echo $cssVariables ?></style>

@@ -49,6 +49,8 @@ final class LocationPlaceBlock extends AbstractCoreBlock
     public function render(array $block, array $context): string
     {
         $props = $this->props($block);
+        $locale = strtolower((string) ($context['locale'] ?? 'de'));
+        $en = str_starts_with($locale, 'en');
         $name = trim((string) ($props['name'] ?? ''));
         $address = trim((string) ($props['address'] ?? ''));
         $phone = trim((string) ($props['phone'] ?? ''));
@@ -57,6 +59,13 @@ final class LocationPlaceBlock extends AbstractCoreBlock
         $lat = trim((string) ($props['lat'] ?? ''));
         $lon = trim((string) ($props['lon'] ?? ''));
         $showMap = $lat !== '' && $lon !== '' && is_numeric($lat) && is_numeric($lon);
+        $hoursLabel = $en ? 'Opening hours' : 'Öffnungszeiten';
+        $mapTitle = $en ? 'Map' : 'Karte';
+        $loadLabel = $en ? 'Load map' : 'Karte laden';
+        $loadHint = $en
+            ? 'The map is provided by OpenStreetMap and loads only after you click.'
+            : 'Die Karte wird von OpenStreetMap bereitgestellt und erst nach Ihrem Klick geladen.';
+        $largerLabel = $en ? 'Larger map' : 'Größere Karte';
 
         $html = '<section class="nx-location">';
         if ($name !== '') {
@@ -75,7 +84,7 @@ final class LocationPlaceBlock extends AbstractCoreBlock
             $html .= '<p><a href="mailto:' . $this->e($email) . '">' . $this->e($email) . '</a></p>';
         }
         if ($hours !== '') {
-            $html .= '<div class="nx-location__hours"><strong>Öffnungszeiten</strong><br>'
+            $html .= '<div class="nx-location__hours"><strong>' . $this->e($hoursLabel) . '</strong><br>'
                 . nl2br($this->e($hours)) . '</div>';
         }
         $html .= '</div>';
@@ -84,17 +93,20 @@ final class LocationPlaceBlock extends AbstractCoreBlock
             $latF = (float) $lat;
             $lonF = (float) $lon;
             $delta = 0.01;
-            $bbox = ($lonF - $delta) . '%2C' . ($latF - $delta) . '%2C' . ($lonF + $delta) . '%2C' . ($latF + $delta);
-            $marker = $latF . '%2C' . $lonF;
-            $src = 'https://www.openstreetmap.org/export/embed.html?bbox=' . $bbox
-                . '&amp;layer=mapnik&amp;marker=' . $marker;
-            $html .= '<div class="nx-location__map">';
-            $html .= '<iframe title="Karte" loading="lazy" referrerpolicy="no-referrer-when-downgrade" '
-                . 'src="' . $src . '"></iframe>';
+            $src = 'https://www.openstreetmap.org/export/embed.html?bbox='
+                . rawurlencode(($lonF - $delta) . ',' . ($latF - $delta) . ',' . ($lonF + $delta) . ',' . ($latF + $delta))
+                . '&layer=mapnik&marker=' . rawurlencode($latF . ',' . $lonF);
+            $html .= '<div class="nx-location__map" data-src="' . $this->e($src) . '" data-title="'
+                . $this->e($mapTitle) . '">';
+            $html .= '<div class="nx-location__map-facade">';
+            $html .= '<p class="nx-location__map-hint">' . $this->e($loadHint) . '</p>';
+            $html .= '<button type="button" class="nx-location__map-load" data-nx-map-load>'
+                . $this->e($loadLabel) . '</button>';
+            $html .= '</div>';
             $html .= '<p class="nx-location__map-link"><a href="https://www.openstreetmap.org/?mlat='
                 . rawurlencode((string) $latF) . '&amp;mlon=' . rawurlencode((string) $lonF)
                 . '#map=16/' . rawurlencode((string) $latF) . '/' . rawurlencode((string) $lonF)
-                . '" target="_blank" rel="noopener">Größere Karte</a></p>';
+                . '" target="_blank" rel="noopener">' . $this->e($largerLabel) . '</a></p>';
             $html .= '</div>';
         }
 

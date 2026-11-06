@@ -4,6 +4,31 @@ Alle wesentlichen Änderungen an Nexis. Format angelehnt an [Keep a Changelog](h
 
 ## [Unreleased]
 
+## [0.4.1] – 2026-11-06
+
+### Added
+
+- AGB/Terms-Seed (DE/EN) bei Installation/Seed inkl. Footer-Links; Registrierung verlangt Annahme von Datenschutz + AGB mit Audit-Eintrag `auth.registration.legal_accepted`
+- Konto-Datenexport unter `/account/export` (JSON, ohne Passwort/2FA-Geheimnis) inkl. Audit `account.data_exported`
+- Skip-Link „Zum Inhalt“ in Theme-Templates; Betreiber-Checkliste AVV/Unterauftragsverarbeiter unter `docs/ops/dpa-subprocessors.md`
+- Standort-Block: OSM-Karte erst nach Klick („Karte laden“), kein automatischer Drittanbieter-Request; A11y-Ziel WCAG 2.2 AA in `docs/ops/accessibility.md`
+- Bestehende Installationen: Legal-Seiten nachziehen via Admin (Seiten → Hinweis) oder `php bin/seed-legal-pages.php` / `composer seed-legal` (Impressum, Datenschutz, AGB; idempotent, überschreibt keine vorhandenen Seiten)
+- Theme-Admin Farben: Kontrast-Hinweis und Live-Kontrastprüfung (WCAG 2.2 AA, Text/Primär/Akzent auf Fläche)
+- Retention per Env: `AUDIT_RETENTION_DAYS` (Default 180) und `FORMS_RETENTION_DAYS` (Default 365) für den Purge in `bin/queue-work.php`; Betreiber-Doku `docs/ops/retention.md`
+- Drittanbieter-/SDK-Inventar für Betreiber unter `docs/ops/vendor-inventory.md` (Consent, OSM, Google Fonts, Update-Check)
+- Betreiber-Leitfaden Notice/Takedown (DMCA/DSA) unter `docs/ops/notice-takedown.md`
+- Datensparsamkeit-Hinweis im Forms-Builder und bei der Registrierung (nur Name/E-Mail/Passwort)
+
+### Fixed
+
+- Öffentliche Seiten: Nexis-Favicon fehlte im Theme-`<head>` (nur Admin hatte es); jetzt über `theme.head` inkl. Fallback-Views
+- Page-Builder: Inline-Script für SEO-/Titel-Sync verstieß gegen CSP `script-src 'self'`; Logik nach `assets/admin/builder.js` verschoben
+- Sprachumschalter im Header: bei mehreren Locales kompakter Dropdown statt aller Codes nebeneinander (Themes + `locale-menu.js`); Escape schließt Menü
+- Consent (`nexis/consent`): Analytics nicht mehr vorausgewählt; Google-Tags (gtag/GTM) erst nach Opt-in laden (Consent-Mode-Defaults bleiben im Head)
+- Consent: Tastatur – Fokus auf Aktion, Escape, Fokus zurück zum Öffner; `:focus-visible` auf Banner-Controls
+- First-Party-Themes: einheitliche `:focus-visible`-Umrisse für Links, Buttons, Nav und Formulare
+- Admin UI-Sprachwechsel behält Tab-Hash (`#colors` usw.)
+
 ## [0.4.0] – 2026-10-03
 
 ### Added

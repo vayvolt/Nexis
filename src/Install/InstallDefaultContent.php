@@ -33,9 +33,11 @@ final class InstallDefaultContent
      *   homeId: string,
      *   imprintId: string,
      *   privacyId: string,
+     *   termsId: string,
      *   homeEnId: string,
      *   imprintEnId: string,
-     *   privacyEnId: string
+     *   privacyEnId: string,
+     *   termsEnId: string
      * } $ids
      */
     public function seed(
@@ -166,6 +168,32 @@ final class InstallDefaultContent
             throw new \RuntimeException('English privacy policy missing after install.');
         }
         $publish->publish($privacyEn, null, $actor, $basePath);
+
+        $documents->save(
+            new PageId($ids['termsId']),
+            $content->termsDocument('de'),
+            null,
+            $actor,
+            'Installation',
+        );
+        $terms = $pages->findById(new PageId($ids['termsId']));
+        if ($terms === null) {
+            throw new \RuntimeException('AGB fehlen nach Installation.');
+        }
+        $publish->publish($terms, null, $actor, $basePath);
+
+        $documents->save(
+            new PageId($ids['termsEnId']),
+            $content->termsDocument('en'),
+            null,
+            $actor,
+            'Installation',
+        );
+        $termsEn = $pages->findById(new PageId($ids['termsEnId']));
+        if ($termsEn === null) {
+            throw new \RuntimeException('English terms of service missing after install.');
+        }
+        $publish->publish($termsEn, null, $actor, $basePath);
 
         if ($withPlugins) {
             $kontaktGroup = Uuid::v7();
@@ -439,9 +467,11 @@ final class InstallDefaultContent
             $ids['homeId'],
             $ids['imprintId'],
             $ids['privacyId'],
+            $ids['termsId'],
             $ids['homeEnId'],
             $ids['imprintEnId'],
             $ids['privacyEnId'],
+            $ids['termsEnId'],
             $kontaktId,
             $kontaktEnId,
             $leistungenId,
@@ -463,9 +493,11 @@ final class InstallDefaultContent
         string $homeId,
         string $imprintId,
         string $privacyId,
+        string $termsId,
         string $homeEnId,
         string $imprintEnId,
         string $privacyEnId,
+        string $termsEnId,
         ?string $kontaktId,
         ?string $kontaktEnId,
         ?string $leistungenId,
@@ -568,6 +600,17 @@ final class InstallDefaultContent
             'created_at' => $now,
             'updated_at' => $now,
         ]);
+        $this->insert($pdo, 'menu_items', [
+            'id' => Uuid::v7(),
+            'menu_id' => $footerId,
+            'parent_id' => null,
+            'page_id' => $termsId,
+            'label' => 'AGB',
+            'url' => null,
+            'sort_order' => 2,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
 
         $primaryEnId = Uuid::v7();
         $footerEnId = Uuid::v7();
@@ -660,6 +703,17 @@ final class InstallDefaultContent
             'label' => 'Privacy',
             'url' => null,
             'sort_order' => 1,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $this->insert($pdo, 'menu_items', [
+            'id' => Uuid::v7(),
+            'menu_id' => $footerEnId,
+            'parent_id' => null,
+            'page_id' => $termsEnId,
+            'label' => 'Terms',
+            'url' => null,
+            'sort_order' => 2,
             'created_at' => $now,
             'updated_at' => $now,
         ]);

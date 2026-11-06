@@ -407,6 +407,57 @@ final class DefaultSiteContent
     }
 
     /** @return array<string, mixed> */
+    public function termsDocument(string $locale = 'de'): array
+    {
+        if ($locale === 'en') {
+            $name = $this->siteName !== '' ? $this->siteName : '[Company name]';
+            $email = $this->adminEmail !== '' ? $this->adminEmail : '[Email]';
+
+            return $this->document(
+                $this->heading('Terms of service', 1),
+                $this->text(
+                    'As of: ' . date('d.m.Y') . "\n\n"
+                    . "1. Provider\n"
+                    . $name . "\n"
+                    . 'Email: ' . $email . "\n\n"
+                    . "2. Scope\n"
+                    . "These terms govern use of this website and any member accounts offered here.\n\n"
+                    . "3. Accounts\n"
+                    . "You are responsible for keeping login credentials confidential and for activity under your account.\n\n"
+                    . "4. Content and availability\n"
+                    . "We aim for reliable availability but do not guarantee uninterrupted access. Unlawful or abusive use is prohibited.\n\n"
+                    . "5. Liability\n"
+                    . "Liability is limited to the extent permitted by applicable law.\n\n"
+                    . 'Please adapt this template with qualified advice for your markets and business model.',
+                ),
+            );
+        }
+
+        $name = $this->siteName !== '' ? $this->siteName : '[Firmenname]';
+        $email = $this->adminEmail !== '' ? $this->adminEmail : '[E-Mail]';
+
+        return $this->document(
+            $this->heading('Allgemeine Geschäftsbedingungen', 1),
+            $this->text(
+                'Stand: ' . date('d.m.Y') . "\n\n"
+                . "1. Anbieter\n"
+                . $name . "\n"
+                . 'E-Mail: ' . $email . "\n\n"
+                . "2. Geltungsbereich\n"
+                . "Diese Bedingungen gelten für die Nutzung dieser Website und ggf. angebotener Benutzerkonten.\n\n"
+                . "3. Konten\n"
+                . "Zugangsdaten sind vertraulich zu behandeln; Sie haften für Aktivitäten unter Ihrem Konto.\n\n"
+                . "4. Inhalte und Verfügbarkeit\n"
+                . "Wir streben eine zuverlässige Verfügbarkeit an, können aber keine unterbrechungsfreie Nutzung zusichern. "
+                . "Rechtswidrige oder missbräuchliche Nutzung ist untersagt.\n\n"
+                . "5. Haftung\n"
+                . "Die Haftung ist im gesetzlich zulässigen Rahmen beschränkt.\n\n"
+                . 'Bitte passen Sie diese Vorlage mit fachkundiger Beratung an Ihre Märkte und Ihr Geschäftsmodell an.',
+            ),
+        );
+    }
+
+    /** @return array<string, mixed> */
     public function privacyDocument(string $locale = 'de'): array
     {
         if ($locale === 'en') {

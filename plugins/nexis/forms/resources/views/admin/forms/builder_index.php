@@ -10,6 +10,7 @@ $forms = $forms ?? [];
     <a class="btn btn-small" href="<?php echo $e($basePath) ?>/admin/forms/builder"><?php echo $e($t('admin.forms.tab_builder')) ?></a>
 </p>
 <p class="muted"><?php echo $e($t('admin.forms.builder.intro')) ?></p>
+<p class="muted"><?php echo $e($t('admin.forms.builder.data_minimization')) ?></p>
 <?php if (!empty($saved)): ?><p class="flash flash--success" role="status"><?php echo $e($t('admin.forms.updated')) ?></p><?php endif; ?>
 <?php if (($error ?? '') !== ''): ?><p class="flash flash--error" role="alert"><?php echo $e($error) ?></p><?php endif; ?>
 

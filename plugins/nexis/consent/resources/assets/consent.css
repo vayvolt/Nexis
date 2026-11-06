@@ -114,6 +114,18 @@
   text-decoration: underline;
 }
 
+.nx-consent__btn:focus-visible,
+.nx-consent__link:focus-visible,
+.nx-consent__cat:focus-within {
+  outline: 2px solid #fafaf9;
+  outline-offset: 2px;
+}
+
+.nx-consent:focus-visible {
+  outline: 2px solid #fafaf9;
+  outline-offset: 3px;
+}
+
 @media (max-width: 640px) {
   .nx-consent__actions {
     width: 100%;

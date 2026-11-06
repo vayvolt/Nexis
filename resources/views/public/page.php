@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/svg+xml" href="<?php echo $e(\Nexis\Kernel\Nexis::brandUrl((string) ($basePath ?? ''), \Nexis\Kernel\Nexis::BRAND_ICON)) ?>">
     <title><?php echo $e($page->title) ?> – <?php echo $e($site->name) ?></title>
     <link rel="canonical" href="<?php echo $e($canonical) ?>">
     <?php foreach ($alternates as $alt): ?>

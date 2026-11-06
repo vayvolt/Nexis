@@ -21,3 +21,7 @@ Nexis bundles or depends on the following open-source components (runtime):
 | vlucas/phpdotenv | BSD-3-Clause |
 
 Full license texts ship with the respective packages under `vendor/`.
+
+## Theme fonts (runtime CDN)
+
+First-party themes load webfonts via Google Fonts CSS `@import` (see each theme’s `assets/theme.css`). Font families are typically under the SIL Open Font License (OFL); the CDN request itself is a third-party connection — document it in your privacy policy or self-host fonts. Operator inventory: `docs/ops/vendor-inventory.md`.

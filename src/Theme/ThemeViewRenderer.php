@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nexis\Theme;
 
 use Nexis\Content\GlobalContent;
+use Nexis\Kernel\Nexis;
 use Nexis\Plugin\PluginKernel;
 use Nexis\Site\Site;
 use Psr\Container\ContainerInterface;
@@ -108,11 +109,16 @@ final class ThemeViewRenderer
      */
     private function coreHeadAssets(array $context): string
     {
-        $base = htmlspecialchars((string) ($context['basePath'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $basePath = (string) ($context['basePath'] ?? '');
+        $base = htmlspecialchars($basePath, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $icon = htmlspecialchars(Nexis::brandUrl($basePath, Nexis::BRAND_ICON), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
-        return '<link rel="stylesheet" href="' . $base . '/assets/core/faq.css">' . "\n"
+        return '<link rel="icon" type="image/svg+xml" href="' . $icon . '">' . "\n"
+            . '<link rel="stylesheet" href="' . $base . '/assets/core/faq.css">' . "\n"
             . '<link rel="stylesheet" href="' . $base . '/assets/core/location.css">' . "\n"
             . '<link rel="stylesheet" href="' . $base . '/assets/core/content-blocks.css">' . "\n"
+            . '<script src="' . $base . '/assets/core/locale-menu.js" defer></script>' . "\n"
+            . '<script src="' . $base . '/assets/core/location-map.js" defer></script>' . "\n"
             . (string) ($context['jsonLdScript'] ?? '');
     }
 

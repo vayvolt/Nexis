@@ -52,8 +52,11 @@ final class ConsentBannerGoogleTest extends TestCase
 
         self::assertStringContainsString('gtag("consent","default"', $head);
         self::assertStringContainsString('analytics_storage:"denied"', $head);
-        self::assertStringContainsString('gtag/js?id=G-TEST12345', $head);
-        self::assertStringContainsString('gtag("config","AW-999")', $head);
+        self::assertStringContainsString('__nxConsentConfig', $head);
+        self::assertStringContainsString('G-TEST12345', $head);
+        self::assertStringContainsString('AW-999', $head);
+        self::assertStringNotContainsString('gtag/js?id=', $head);
+        self::assertStringNotContainsString('gtm.js', $head);
         self::assertStringContainsString('consent.js', $head);
         unset($siteId);
     }
@@ -70,9 +73,11 @@ final class ConsentBannerGoogleTest extends TestCase
 
         $html = (new ConsentBanner($sites, $settings, $this->publicUi(), new PluginAssetRegistry()))->bannerHtml(['locale' => 'de', 'basePath' => '/nexis']);
         self::assertStringContainsString('data-nx-cat="analytics"', $html);
+        self::assertDoesNotMatchRegularExpression('/data-nx-cat="analytics"[^>]*checked/', $html);
         self::assertStringContainsString('data-nx-consent-reject', $html);
         self::assertStringContainsString('data-nx-consent-save', $html);
         self::assertStringContainsString('data-nx-consent-accept', $html);
+        self::assertStringNotContainsString('googletagmanager.com/ns.html', $html);
     }
 
     public function testSettingsLinkIsRenderedWhenTrackingConfigured(): void

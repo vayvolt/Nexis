@@ -27,6 +27,7 @@
     "admin.forms.builder.field_type": "Type",
     "admin.forms.builder.fields": "Fields",
     "admin.forms.builder.form_id_hint": "In the builder block set form ID/slug: :id",
+    "admin.forms.builder.data_minimization": "Data minimisation: only add fields you truly need. Every required field expands the processing scope.",
     "admin.forms.builder.intro": "Create forms, manage fields and simple visibility conditions.",
     "admin.forms.builder.meta": "Properties",
     "admin.forms.builder.move_down": "Move down",

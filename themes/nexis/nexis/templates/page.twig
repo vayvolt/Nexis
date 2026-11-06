@@ -37,6 +37,7 @@
     {{ slot('theme.head') }}
 </head>
 <body class="theme-shell theme-nexis layout-nav-{{ layout.navPosition|default('right') }} layout-footer-{{ layout.footerPosition|default('split') }}{% if layout.logoInNav|default(false) %} layout-logo-nav{% endif %}">
+<a class="skip-link" href="#main-content">{{ themeUi.skipToContent|default('Skip to content') }}</a>
 <header class="theme-header">
     <a class="theme-brand" href="{{ homeUrl }}">
         {% if logoUrl and not (layout.logoInNav|default(false)) %}
@@ -71,19 +72,29 @@
                 <a class="theme-nav-account" href="{{ item.url }}">{{ item.label }}</a>
             {% endfor %}
         </nav>
+        {% if alternates|default([])|length > 1 %}
         <nav class="theme-nav theme-nav--locales" aria-label="{{ themeUi.ariaLocales|default('Languages') }}">
-            {% for alt in alternates %}
-                {% if alt.published|default(true) %}
-                    <a href="{{ alt.url }}"{% if alt.locale == locale %} aria-current="page" class="is-active"{% endif %}>{{ alt.locale|upper }}</a>
-                {% else %}
-                    <span class="is-unavailable" title="{{ alt.unavailableLabel|default(themeUi.unavailable|default('coming soon')) }}">{{ alt.locale|upper }}</span>
-                {% endif %}
-            {% endfor %}
+            <details class="theme-locale-menu">
+                <summary>
+                    <span class="theme-locale-menu__code">{{ locale|upper }}</span>
+                    <span class="theme-nav-caret" aria-hidden="true"></span>
+                </summary>
+                <div class="theme-locale-menu__list" role="list">
+                    {% for alt in alternates %}
+                        {% if alt.published|default(true) %}
+                            <a href="{{ alt.url }}" role="listitem"{% if alt.locale == locale %} aria-current="true" class="is-active"{% endif %}>{{ alt.locale|upper }}</a>
+                        {% else %}
+                            <span class="is-unavailable" role="listitem" title="{{ alt.unavailableLabel|default(themeUi.unavailable|default('coming soon')) }}">{{ alt.locale|upper }}</span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </details>
         </nav>
+        {% endif %}
     </div>
     {{ slot('theme.header-actions') }}
 </header>
-<main class="theme-main">
+<main id="main-content" class="theme-main" tabindex="-1">
     <article{% if page.isPost|default(false) %} class="theme-post"{% endif %}>
         {% if layout.pageTitle|default('hide') == 'show' %}
             <h1 class="theme-page-title">{{ page.title }}</h1>

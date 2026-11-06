@@ -50,4 +50,27 @@
       closeDropdowns(null);
     }
   });
+
+  // Preserve page tab hash (#colors, #layout, …) across UI-locale switches.
+  // Fragments are never sent to the server in REQUEST_URI / return=.
+  document.querySelectorAll('.admin-locale a[href*="ui-locale"]').forEach(function (link) {
+    link.addEventListener('click', function () {
+      var hash = (location.hash || '').replace(/^#/, '');
+      if (!hash || !/^[A-Za-z0-9_-]{1,64}$/.test(hash)) {
+        return;
+      }
+      try {
+        var url = new URL(link.getAttribute('href') || '', location.origin);
+        var ret = url.searchParams.get('return');
+        if (!ret) {
+          return;
+        }
+        var base = ret.split('#')[0];
+        url.searchParams.set('return', base + '#' + hash);
+        link.setAttribute('href', url.pathname + url.search);
+      } catch (err) {
+        // ignore malformed href
+      }
+    });
+  });
 })();

@@ -49,7 +49,8 @@ final class ConsentBanner
         $config = $this->googleConfig($site);
         $jsonFlags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES;
 
-        $html = '<!-- nexis/consent: Google Consent Mode v2 defaults -->' . "\n";
+        // Consent Mode defaults only — Google tags load from consent.js after opt-in.
+        $html = '<!-- nexis/consent: Google Consent Mode v2 defaults (tags deferred) -->' . "\n";
         $html .= '<script>'
             . 'window.dataLayer=window.dataLayer||[];'
             . 'function gtag(){dataLayer.push(arguments);}'
@@ -64,27 +65,6 @@ final class ConsentBanner
             . '});'
             . 'window.__nxConsentConfig=' . json_encode($config, $jsonFlags) . ';'
             . '</script>' . "\n";
-
-        if ($config['gtmId'] !== '') {
-            $gtm = htmlspecialchars($config['gtmId'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-            $html .= '<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({\'gtm.start\':new Date().getTime(),event:\'gtm.js\'});'
-                . 'var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!=\'dataLayer\'?\'&l=\'+l:\'\';'
-                . 'j.async=true;j.src=\'https://www.googletagmanager.com/gtm.js?id=\'+i+dl;'
-                . 'f.parentNode.insertBefore(j,f);})(window,document,\'script\',\'dataLayer\',\'' . $gtm . '\');</script>' . "\n";
-        } elseif ($config['gaId'] !== '') {
-            $ga = htmlspecialchars($config['gaId'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-            $html .= '<script async src="https://www.googletagmanager.com/gtag/js?id=' . $ga . '"></script>' . "\n";
-            $html .= '<script>gtag("js",new Date());gtag("config","' . $ga . '");';
-            if ($config['adsId'] !== '') {
-                $ads = htmlspecialchars($config['adsId'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                $html .= 'gtag("config","' . $ads . '");';
-            }
-            $html .= '</script>' . "\n";
-        } elseif ($config['adsId'] !== '') {
-            $ads = htmlspecialchars($config['adsId'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-            $html .= '<script async src="https://www.googletagmanager.com/gtag/js?id=' . $ads . '"></script>' . "\n";
-            $html .= '<script>gtag("js",new Date());gtag("config","' . $ads . '");</script>' . "\n";
-        }
 
         $html .= '<link rel="stylesheet" href="' . $basePath . $this->assets->url('nexis/consent', 'consent.css') . '">' . "\n"
             . '<script src="' . $basePath . $this->assets->url('nexis/consent', 'consent.js') . '" defer></script>';
@@ -129,7 +109,7 @@ final class ConsentBanner
         if ($showAnalytics || $showMarketing) {
             $html .= '<div class="nx-consent__cats" data-nx-consent-cats>';
             if ($showAnalytics) {
-                $html .= '<label class="nx-consent__cat"><input type="checkbox" data-nx-cat="analytics" checked> '
+                $html .= '<label class="nx-consent__cat"><input type="checkbox" data-nx-cat="analytics"> '
                     . $e($analyticsLabel) . '</label>';
             }
             if ($showMarketing) {
@@ -152,12 +132,6 @@ final class ConsentBanner
         $html .= '<button type="button" class="nx-consent__btn nx-consent__btn--primary" data-nx-consent-accept>'
             . $e($accept) . '</button>';
         $html .= '</div></div></div>';
-
-        if ($config['gtmId'] !== '') {
-            $gtm = $e($config['gtmId']);
-            $html .= '<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=' . $gtm
-                . '" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>';
-        }
 
         return $html;
     }

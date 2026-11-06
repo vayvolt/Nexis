@@ -56,7 +56,17 @@ final class UiLocaleAdminController
         if (is_array($parts) && isset($parts['query']) && is_string($parts['query']) && $parts['query'] !== '') {
             $query = '?' . $parts['query'];
         }
+        // Tab hashes (#colors, #layout, …) are not in REQUEST_URI; JS may append them to return=.
+        $fragment = '';
+        if (
+            is_array($parts)
+            && isset($parts['fragment'])
+            && is_string($parts['fragment'])
+            && preg_match('/^[A-Za-z0-9_-]{1,64}$/', $parts['fragment']) === 1
+        ) {
+            $fragment = '#' . $parts['fragment'];
+        }
 
-        return $this->responses->redirect($path . $query);
+        return $this->responses->redirect($path . $query . $fragment);
     }
 }

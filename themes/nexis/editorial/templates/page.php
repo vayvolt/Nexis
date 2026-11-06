@@ -46,7 +46,8 @@ $bodyClass = 'theme-shell theme-editorial layout-nav-' . $e($navPosition)
     . ' layout-footer-' . $e($footerPosition)
     . ($logoInNav ? ' layout-logo-nav' : '');
 ?>
-<body class="<?php echo $bodyClass ?>">
+<body class="<?php echo $bodyClass ?>
+<a class="skip-link" href="#main-content"><?php echo $e((string) ($themeUi['skipToContent'] ?? 'Skip to content')) ?></a>">
 <header class="theme-header">
     <a class="theme-brand" href="<?php echo $e($homeUrl) ?>">
         <?php if ($logoUrl !== '' && !$logoInNav): ?>
@@ -78,19 +79,29 @@ $bodyClass = 'theme-shell theme-editorial layout-nav-' . $e($navPosition)
                 <?php endif; ?>
             <?php endforeach; ?>
         </nav>
+        <?php if (count($alternates ?? []) > 1): ?>
         <nav class="theme-nav theme-nav--locales" aria-label="<?php echo $e((string) ($themeUi['ariaLocales'] ?? 'Languages')) ?>">
-            <?php foreach ($alternates as $alt): ?>
-                <?php if (($alt['published'] ?? true) === true): ?>
-                    <a href="<?php echo $e($alt['url']) ?>"<?php echo ($alt['locale'] ?? '') === $locale ? ' aria-current="page" class="is-active"' : '' ?>><?php echo $e(strtoupper((string) $alt['locale'])) ?></a>
-                <?php else: ?>
-                    <span class="is-unavailable" title="<?php echo $e((string) ($alt['unavailableLabel'] ?? ($themeUi['unavailable'] ?? 'coming soon'))) ?>"><?php echo $e(strtoupper((string) $alt['locale'])) ?></span>
-                <?php endif; ?>
-            <?php endforeach; ?>
+            <details class="theme-locale-menu">
+                <summary>
+                    <span class="theme-locale-menu__code"><?php echo $e(strtoupper((string) $locale)) ?></span>
+                    <span class="theme-nav-caret" aria-hidden="true"></span>
+                </summary>
+                <div class="theme-locale-menu__list" role="list">
+                    <?php foreach ($alternates as $alt): ?>
+                        <?php if (($alt['published'] ?? true) === true): ?>
+                            <a href="<?php echo $e($alt['url']) ?>" role="listitem"<?php echo ($alt['locale'] ?? '') === $locale ? ' aria-current="true" class="is-active"' : '' ?>><?php echo $e(strtoupper((string) $alt['locale'])) ?></a>
+                        <?php else: ?>
+                            <span class="is-unavailable" role="listitem" title="<?php echo $e((string) ($alt['unavailableLabel'] ?? ($themeUi['unavailable'] ?? 'coming soon'))) ?>"><?php echo $e(strtoupper((string) $alt['locale'])) ?></span>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </div>
+            </details>
         </nav>
+        <?php endif; ?>
     </div>
     <?php echo is_callable($slot ?? null) ? $slot('theme.header-actions') : '' ?>
 </header>
-<main class="theme-main">
+<main id="main-content" class="theme-main" tabindex="-1">
     <article>
         <?php if ($pageTitleMode === 'show'): ?>
             <h1 class="theme-page-title"><?php echo $e($page->title) ?></h1>

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 /**
  * Process queued webhook deliveries, mail jobs, plugin JobHandlers, due scheduled publishes,
- * purge expired audit log rows (default retention 180 days),
+ * purge expired audit log rows (default 180 days, AUDIT_RETENTION_DAYS),
  * purge expired idempotency keys,
- * purge old form submissions (default retention 365 days),
+ * purge old form submissions (default 365 days, FORMS_RETENTION_DAYS),
  * and run the due scheduled backup (Admin → Backups).
  *
  * Usage: php bin/queue-work.php
@@ -18,6 +18,7 @@ use Nexis\Content\ScheduledPublishWorker;
 use Nexis\Http\IdempotencyStore;
 use Nexis\Infrastructure\Backup\BackupScheduleRunner;
 use Nexis\Kernel\Bootstrap;
+use Nexis\Kernel\Config;
 use Nexis\Mail\MailQueueWorker;
 use Nexis\Plugin\PluginRuntime;
 use Nexis\Plugins\Forms\FormsRetentionPurge;
@@ -49,10 +50,13 @@ try {
     $scheduled = $app->container->get(ScheduledPublishWorker::class)->processDue(50);
     $unpublished = $app->container->get(ScheduledPublishWorker::class)->processDueUnpublish(50);
 
-    $cutoff = $app->container->get(Clock::class)->now()->modify('-180 days');
+    $config = $app->container->get(Config::class);
+    $auditDays = $config->auditRetentionDays();
+    $formsDays = $config->formsRetentionDays();
+    $cutoff = $app->container->get(Clock::class)->now()->modify('-' . $auditDays . ' days');
     $purged = $app->container->get(AuditLogger::class)->purgeOlderThan($cutoff);
     $idemPurged = $app->container->get(IdempotencyStore::class)->purgeExpired();
-    $formsPurged = $app->container->get(FormsRetentionPurge::class)->purgeOlderThanDays();
+    $formsPurged = $app->container->get(FormsRetentionPurge::class)->purgeOlderThanDays($formsDays);
 
     // Once per process: create the scheduled backup when the Planer is due.
     $backup = $app->container->get(BackupScheduleRunner::class)->runIfDue();

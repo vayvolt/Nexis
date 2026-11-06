@@ -27,6 +27,7 @@
     "admin.forms.builder.field_type": "Typ",
     "admin.forms.builder.fields": "Felder",
     "admin.forms.builder.form_id_hint": "Im Builder-Block Formular-ID/Slug: :id",
+    "admin.forms.builder.data_minimization": "Datensparsamkeit: nur Felder anlegen, die Sie wirklich brauchen. Jedes Pflichtfeld erhöht den Umfang der Verarbeitung.",
     "admin.forms.builder.intro": "Formulare anlegen, Felder und einfache Sichtbarkeitsbedingungen pflegen.",
     "admin.forms.builder.meta": "Eigenschaften",
     "admin.forms.builder.move_down": "Nach unten",

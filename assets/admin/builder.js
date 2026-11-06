@@ -1066,6 +1066,111 @@
     });
   }
 
+  function initSeoPanel(config) {
+    var title = document.getElementById('page-title');
+    var heading = document.querySelector('.nx-builder-heading');
+    if (title && heading) {
+      title.addEventListener('input', function () {
+        var value = title.value.trim();
+        heading.textContent = value !== '' ? value : '…';
+      });
+    }
+
+    var panel = document.getElementById('nx-seo-panel');
+    if (!panel) {
+      return;
+    }
+    var i18n = config.i18n || {};
+    var noDesc = i18n.seoPreviewNoDesc || '';
+    var weights = {
+      keyword_set: 15,
+      keyword_in_title: 20,
+      keyword_in_description: 15,
+      title_length: 20,
+      description_length: 20,
+      robots_index: 10,
+    };
+
+    function val(id) {
+      var el = document.getElementById(id);
+      return el ? String(el.value || '') : '';
+    }
+
+    function refresh() {
+      var pageTitle = val('page-title').trim() || panel.getAttribute('data-page-title') || '';
+      var metaTitle = val('meta_title').trim();
+      var metaDesc = val('meta_description').trim();
+      var keyword = val('focus_keyword').trim().toLowerCase();
+      var robots = val('robots');
+      var seoTitle = metaTitle !== '' ? metaTitle : pageTitle;
+      var titleLen = seoTitle.length;
+      var descLen = metaDesc.length;
+      var checks = {
+        keyword_set: keyword !== '',
+        keyword_in_title: keyword !== '' && seoTitle.toLowerCase().indexOf(keyword) !== -1,
+        keyword_in_description: keyword !== '' && metaDesc.toLowerCase().indexOf(keyword) !== -1,
+        title_length: titleLen >= 30 && titleLen <= 60,
+        description_length: descLen >= 70 && descLen <= 160,
+        robots_index: robots.indexOf('noindex') === -1,
+      };
+      var earned = 0;
+      var total = 0;
+      Object.keys(weights).forEach(function (id) {
+        total += weights[id];
+        if (checks[id]) {
+          earned += weights[id];
+        }
+        var li = panel.querySelector('[data-check="' + id + '"]');
+        if (!li) {
+          return;
+        }
+        li.classList.toggle('is-ok', !!checks[id]);
+        li.classList.toggle('is-bad', !checks[id]);
+        var mark = li.querySelector('.nx-seo-check-mark');
+        if (mark) {
+          mark.textContent = checks[id] ? '✓' : '·';
+        }
+      });
+      var scoreEl = document.getElementById('nx-seo-score-value');
+      var score = Math.round((earned / total) * 100);
+      if (scoreEl) {
+        scoreEl.textContent = String(score);
+      }
+      var summaryScore = document.getElementById('nx-seo-summary-score');
+      if (summaryScore) {
+        summaryScore.textContent = String(score) + '/100';
+        summaryScore.setAttribute('data-score', String(score));
+        summaryScore.classList.toggle('is-low', score < 40);
+        summaryScore.classList.toggle('is-mid', score >= 40 && score < 70);
+      }
+
+      var previewTitle = seoTitle || '…';
+      var previewDesc = metaDesc !== '' ? metaDesc : noDesc;
+      var map = {
+        'nx-seo-serp-title': previewTitle,
+        'nx-seo-serp-desc': previewDesc,
+        'nx-seo-og-title': previewTitle,
+        'nx-seo-og-desc': previewDesc,
+      };
+      Object.keys(map).forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) {
+          el.textContent = map[id];
+        }
+      });
+    }
+
+    ['page-title', 'meta_title', 'meta_description', 'focus_keyword', 'robots'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) {
+        return;
+      }
+      el.addEventListener('input', refresh);
+      el.addEventListener('change', refresh);
+    });
+    refresh();
+  }
+
   function bootFromDom() {
     var el = document.getElementById('nx-builder-config');
     if (!el) {
@@ -1079,6 +1184,7 @@
     }
     init(config);
     bindVisibleMirror(config);
+    initSeoPanel(config);
   }
 
   window.NexisBuilder = { init: init };

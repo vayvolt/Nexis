@@ -397,9 +397,11 @@ final class WebInstaller
      *   homeId: string,
      *   imprintId: string,
      *   privacyId: string,
+     *   termsId: string,
      *   homeEnId: string,
      *   imprintEnId: string,
-     *   privacyEnId: string
+     *   privacyEnId: string,
+     *   termsEnId: string
      * }
      */
     private function provision(
@@ -419,12 +421,15 @@ final class WebInstaller
         $homeId = Uuid::v7();
         $imprintId = Uuid::v7();
         $privacyId = Uuid::v7();
+        $termsId = Uuid::v7();
         $homeEnId = Uuid::v7();
         $imprintEnId = Uuid::v7();
         $privacyEnId = Uuid::v7();
+        $termsEnId = Uuid::v7();
         $homeGroup = Uuid::v7();
         $imprintGroup = Uuid::v7();
         $privacyGroup = Uuid::v7();
+        $termsGroup = Uuid::v7();
         if (!in_array($defaultLocale, ['de', 'en'], true)) {
             $defaultLocale = 'de';
         }
@@ -597,6 +602,38 @@ final class WebInstaller
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
+            $this->insert($pdo, 'pages', [
+                'id' => $termsId,
+                'site_id' => $siteId,
+                'translation_group_id' => $termsGroup,
+                'type' => 'page',
+                'slug' => 'agb',
+                'path' => '/agb',
+                'locale' => 'de',
+                'title' => 'AGB',
+                'meta_title' => 'Allgemeine Geschäftsbedingungen',
+                'meta_description' => 'Nutzungsbedingungen dieser Website',
+                'status' => 'draft',
+                'robots' => 'index,follow',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+            $this->insert($pdo, 'pages', [
+                'id' => $termsEnId,
+                'site_id' => $siteId,
+                'translation_group_id' => $termsGroup,
+                'type' => 'page',
+                'slug' => 'terms',
+                'path' => '/terms',
+                'locale' => 'en',
+                'title' => 'Terms of service',
+                'meta_title' => 'Terms of service',
+                'meta_description' => 'Terms of use for this website',
+                'status' => 'draft',
+                'robots' => 'index,follow',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
 
             $pdo->commit();
         } catch (Throwable $e) {
@@ -610,9 +647,11 @@ final class WebInstaller
             'homeId' => $homeId,
             'imprintId' => $imprintId,
             'privacyId' => $privacyId,
+            'termsId' => $termsId,
             'homeEnId' => $homeEnId,
             'imprintEnId' => $imprintEnId,
             'privacyEnId' => $privacyEnId,
+            'termsEnId' => $termsEnId,
         ];
     }
 

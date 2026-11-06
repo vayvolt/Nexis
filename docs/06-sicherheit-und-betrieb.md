@@ -118,14 +118,15 @@ Geschrieben werden u. a.:
 - Settings-Änderungen an Secrets (Wert nicht im Klartext loggen)
 - Backups: `backup.create`, `backup.download`, `backup.delete`, `backup.schedule.update`
 
-Retention: Default 180 Tage (Purge über `php bin/queue-work.php`; derzeit fest im Worker, nicht per Env konfigurierbar).
+Retention: Default 180 Tage (Purge über `php bin/queue-work.php`; konfigurierbar per `AUDIT_RETENTION_DAYS`, Minimum 30) — siehe [ops/retention.md](ops/retention.md).
 
 ## 6.10 DSGVO-relevante Punkte
 
-- **Cookies / TTDSG:** Technisch notwendige Cookies (Session, CSRF, Sicherheit) erfordern keine Einwilligung; sie müssen in der Datenschutzerklärung beschrieben sein. Statistik/Marketing (Google Analytics, GTM, Ads) nur nach Opt-in – das Consent-Plugin zeigt das Banner **nur**, wenn mindestens eine Google-ID konfiguriert ist.
+- **Cookies / TTDSG:** Technisch notwendige Cookies (Session, CSRF, Sicherheit) erfordern keine Einwilligung; sie müssen in der Datenschutzerklärung beschrieben sein. Statistik/Marketing (Google Analytics, GTM, Ads) nur nach Opt-in – das Consent-Plugin zeigt das Banner **nur**, wenn mindestens eine Google-ID konfiguriert ist; Google-Tags laden erst nach Zustimmung.
 - Medien und Formular-Plugins speichern personenbezogene Daten site-bezogen.
-- Löschkonzept: User-Anonymisierung beim Soft-Delete (E-Mail/Name/TOTP), Formular-Export (CSV) und Löschung als Plugin-Pflicht; Formular-Retention-Purge über Queue-Worker (365 Tage).
-- Auftragsverarbeitung liegt außerhalb dieser technischen Doku, muss aber zu den Löschpfaden passen.
+- **Auskunft:** Mitglieder können unter `/account/export` ein JSON ihrer Kontodaten laden; Admin: Formular-CSV unter `nexis/forms`, Benutzerverwaltung unter `/admin/users`.
+- Löschkonzept: User-Anonymisierung beim Soft-Delete (E-Mail/Name/TOTP) inkl. Selbstlöschung im Konto, Formular-Export (CSV) und Löschung als Plugin-Pflicht; Formular-Retention-Purge über Queue-Worker (Default 365 Tage, `FORMS_RETENTION_DAYS`) — [ops/retention.md](ops/retention.md).
+- Auftragsverarbeitung: Betreiber-Checkliste unter [ops/dpa-subprocessors.md](ops/dpa-subprocessors.md); Drittanbieter-Inventar [ops/vendor-inventory.md](ops/vendor-inventory.md).
 
 ## 6.11 Document Root im Projektordner
 

@@ -1,4 +1,4 @@
-# Go-Live-Checkliste (Nexis 0.4)
+# Go-Live-Checkliste (Nexis 0.4.x)
 
 Vor dem öffentlichen Betrieb abhaken. Details: [Sicherheit und Betrieb](../06-sicherheit-und-betrieb.md), [nginx](nginx.conf.example), [Queue](queue.md), [Restore](restore.md).
 
@@ -24,7 +24,9 @@ Vor dem öffentlichen Betrieb abhaken. Details: [Sicherheit und Betrieb](../06-s
 
 - [ ] Admin-Passwort stark; 2FA unter `/admin/security` aktiv
 - [ ] Optional: `PLUGIN_TRUST_PUBLIC_KEY` setzen, wenn nur signierte Plugin-ZIPs erlaubt sein sollen
-- [ ] Consent/GA: CSP wird automatisch erweitert, wenn Google-IDs konfiguriert sind
+- [ ] Consent/GA: CSP wird automatisch erweitert, wenn Google-IDs konfiguriert sind; Tags erst nach Opt-in
+- [ ] Rechtliches: Datenschutz, Impressum, AGB vorhanden und Inhalte angepasst (fehlende Seiten: Admin → Seiten oder `php bin/seed-legal-pages.php`); AVV/Unterauftragsverarbeiter-Liste ([dpa-subprocessors.md](dpa-subprocessors.md)); Vendor-/SDK-Inventar ([vendor-inventory.md](vendor-inventory.md))
+- [ ] Retention: `AUDIT_RETENTION_DAYS` / `FORMS_RETENTION_DAYS` in `.env` an Löschkonzept anpassen ([retention.md](retention.md)); Queue-Worker läuft regelmäßig
 - [ ] Backup-Job eingerichtet: Planer unter `/admin/backups` aktiviert (läuft mit `php bin/queue-work.php`) **oder** Cron auf `php bin/backup.php --scheduled`; Restore einmal getestet (`php bin/restore.php --latest --yes` auf Staging)
 - [ ] Vor CMS-ZIP-Update immer Backup; bei Fehlern Restore, nicht „weiterprobieren“
 
@@ -35,8 +37,11 @@ Vor dem öffentlichen Betrieb abhaken. Details: [Sicherheit und Betrieb](../06-s
 - [ ] Seite veröffentlichen → öffentliche URL zeigt Inhalt; Cache-Header plausibel
 - [ ] Medien-Upload und Auslieferung
 - [ ] Formular-Submit (falls Plugin aktiv)
+- [ ] Standort-Karte: Embed lädt erst nach „Karte laden“ (OSM)
 - [ ] `/health` → DB, `storage` und Queue-Status ok
 - [ ] Optional: Admin → System → Health prüfen (Queue-Tiefe, Disk, PHP)
+- [ ] Optional: A11y-Kurzcheck ([accessibility.md](accessibility.md)); Theme-Kontrast unter Admin → Theme → Farben
+- [ ] Bei UGC/US-Hosting: Notice-/Takedown-Kontakt und Prozess ([notice-takedown.md](notice-takedown.md))
 
 ## Scope 0.4
 

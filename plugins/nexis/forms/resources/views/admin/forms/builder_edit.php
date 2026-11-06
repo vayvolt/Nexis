@@ -44,6 +44,7 @@ $conditionOps = $conditionOps ?? \Nexis\Plugins\Forms\FormField::OPS;
 
     <div class="card">
         <h2><?php echo $e($t('admin.forms.builder.fields')) ?></h2>
+        <p class="muted"><?php echo $e($t('admin.forms.builder.data_minimization')) ?></p>
         <?php if ($form->fields === []): ?>
             <p class="muted"><?php echo $e($t('admin.forms.builder.no_fields')) ?></p>
         <?php endif; ?>

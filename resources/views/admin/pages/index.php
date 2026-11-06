@@ -8,7 +8,24 @@ $pageGroups = $pageGroups ?? [];
 <h1><?php echo $e($t('admin.pages.title')) ?></h1>
 <p class="muted"><?php echo $e($t('admin.pages.list_intro')) ?></p>
 <?php if (!empty($deleted)): ?><p class="flash flash--success" role="status"><?php echo $e($t('admin.pages.deleted')) ?></p><?php endif; ?>
+<?php if (!empty($legalSeeded)): ?><p class="flash flash--success" role="status"><?php echo $e($t('admin.pages.legal_seeded', ['count' => (string) ($legalCreated ?? '0')])) ?></p><?php endif; ?>
 <?php if (($error ?? '') !== ''): ?><p class="flash flash--error" role="alert"><?php echo $e($error) ?></p><?php endif; ?>
+<?php
+$legalGaps = is_array($legalGaps ?? null) ? $legalGaps : [];
+if ($legalGaps !== [] && !empty($canSeedLegal)):
+    $gapLabels = array_map(
+        static fn (array $g): string => (string) ($g['title'] ?? '') . ' (' . (string) ($g['locale'] ?? '') . ')',
+        $legalGaps,
+    );
+?>
+<p class="flash" role="status">
+    <?php echo $e($t('admin.pages.legal_missing', ['pages' => implode(', ', $gapLabels)])) ?>
+</p>
+<form method="post" action="<?php echo $e($basePath) ?>/admin/pages/seed-legal" style="margin:0 0 1rem">
+    <input type="hidden" name="_csrf" value="<?php echo $e($csrf) ?>">
+    <button type="submit" class="btn"><?php echo $e($t('admin.pages.legal_seed')) ?></button>
+</form>
+<?php endif; ?>
 
 <p><?php if (!empty($canEditContent)): ?><a class="btn" href="<?php echo $e($basePath) ?>/admin/pages/new"><?php echo $e($t('admin.pages.new')) ?></a><?php endif; ?></p>
 

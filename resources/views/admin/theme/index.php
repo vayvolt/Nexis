@@ -181,6 +181,7 @@ $themeTabs = [
             hidden
         >
             <p class="muted"><?php echo $e($t('admin.theme.colors_hint')) ?></p>
+            <p class="muted"><?php echo $e($t('admin.theme.contrast_hint')) ?></p>
             <div class="row">
                 <div>
                     <label for="token_color_brand_primary"><?php echo $e($t('admin.theme.primary')) ?></label>
@@ -200,6 +201,35 @@ $themeTabs = [
                     <label for="token_color_text"><?php echo $e($t('admin.theme.text')) ?></label>
                     <input id="token_color_text" name="token_color_text" value="<?php echo $e($overrides['color.text'] ?? $tokens['color.text'] ?? '') ?>">
                 </div>
+            </div>
+            <div
+                class="theme-contrast"
+                data-theme-contrast
+                data-pass="<?php echo $e($t('admin.theme.contrast_pass')) ?>"
+                data-fail="<?php echo $e($t('admin.theme.contrast_fail')) ?>"
+                data-na="<?php echo $e($t('admin.theme.contrast_na')) ?>"
+                data-large="<?php echo $e($t('admin.theme.contrast_large')) ?>"
+                aria-live="polite"
+            >
+                <p class="theme-contrast__title"><?php echo $e($t('admin.theme.contrast_title')) ?></p>
+                <p class="muted" style="margin:.25rem 0 .65rem"><?php echo $e($t('admin.theme.contrast_intro')) ?></p>
+                <ul class="theme-contrast__list">
+                    <li data-contrast-row="text">
+                        <span class="theme-contrast__swatch" data-contrast-swatch hidden aria-hidden="true">Aa</span>
+                        <span class="theme-contrast__label"><?php echo $e($t('admin.theme.contrast_text_surface')) ?></span>
+                        <span class="theme-contrast__value" data-contrast-value><?php echo $e($t('admin.theme.contrast_na')) ?></span>
+                    </li>
+                    <li data-contrast-row="primary">
+                        <span class="theme-contrast__swatch" data-contrast-swatch hidden aria-hidden="true">Aa</span>
+                        <span class="theme-contrast__label"><?php echo $e($t('admin.theme.contrast_primary_surface')) ?></span>
+                        <span class="theme-contrast__value" data-contrast-value><?php echo $e($t('admin.theme.contrast_na')) ?></span>
+                    </li>
+                    <li data-contrast-row="accent">
+                        <span class="theme-contrast__swatch" data-contrast-swatch hidden aria-hidden="true">Aa</span>
+                        <span class="theme-contrast__label"><?php echo $e($t('admin.theme.contrast_accent_surface')) ?></span>
+                        <span class="theme-contrast__value" data-contrast-value><?php echo $e($t('admin.theme.contrast_na')) ?></span>
+                    </li>
+                </ul>
             </div>
             <label for="token_brand_logoUrl"><?php echo $e($t('admin.theme.logo_url')) ?></label>
             <div class="theme-logo-field" data-logo-picker>
@@ -293,5 +323,53 @@ $themeTabs = [
   border-color: var(--accent, #1b4d3e);
   box-shadow: 0 0 0 2px rgba(27, 77, 62, 0.18);
 }
+.theme-contrast {
+  margin: 1rem 0 0;
+  padding: .6rem .7rem;
+  border: 1px solid var(--line, #d6d3d1);
+  border-radius: 6px;
+  background: var(--card, #fff);
+  max-width: 20rem;
+  width: fit-content;
+  box-sizing: border-box;
+}
+.theme-contrast__title { margin: 0; font-weight: 600; font-size: .95rem; }
+.theme-contrast > .muted { font-size: .8rem; line-height: 1.35; }
+.theme-contrast__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: .4rem;
+}
+.theme-contrast__list li {
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, auto);
+  column-gap: .45rem;
+  row-gap: .1rem;
+  align-items: center;
+  font-size: .85rem;
+}
+.theme-contrast__swatch {
+  grid-row: 1 / span 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 4px;
+  border: 1px solid var(--line, #d6d3d1);
+  font-size: .65rem;
+  font-weight: 600;
+  align-self: start;
+}
+.theme-contrast__label { font-weight: 500; }
+.theme-contrast__value {
+  color: var(--muted, #78716c);
+  font-size: .78rem;
+  line-height: 1.3;
+  white-space: normal;
+}
 </style>
 <script src="<?php echo $e($basePath) ?>/assets/admin/theme-logo.js" defer></script>
+<script src="<?php echo $e($basePath) ?>/assets/admin/theme-contrast.js" defer></script>

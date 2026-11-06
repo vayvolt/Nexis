@@ -902,6 +902,55 @@ if ($privacyEnPage === null) {
 }
 $publish->publish($privacyEnPage, null, $actor, $basePath);
 
+$termsDe = Uuid::v7();
+$termsEn = Uuid::v7();
+$groupTerms = Uuid::v7();
+insert($pdo, 'pages', [
+    'id' => $termsDe,
+    'site_id' => $siteId,
+    'translation_group_id' => $groupTerms,
+    'type' => 'page',
+    'slug' => 'agb',
+    'path' => '/agb',
+    'locale' => 'de',
+    'title' => 'AGB',
+    'meta_title' => 'Allgemeine Geschäftsbedingungen',
+    'meta_description' => 'Nutzungsbedingungen dieser Website.',
+    'body_text' => null,
+    'status' => PageStatus::Draft->value,
+    'created_at' => $now,
+    'updated_at' => $now,
+]);
+insert($pdo, 'pages', [
+    'id' => $termsEn,
+    'site_id' => $siteId,
+    'translation_group_id' => $groupTerms,
+    'type' => 'page',
+    'slug' => 'terms',
+    'path' => '/terms',
+    'locale' => 'en',
+    'title' => 'Terms of service',
+    'meta_title' => 'Terms of service',
+    'meta_description' => 'Terms of use for this website.',
+    'body_text' => null,
+    'status' => PageStatus::Draft->value,
+    'created_at' => $now,
+    'updated_at' => $now,
+]);
+$defaultContent = new Nexis\Install\DefaultSiteContent('Nexis Demo', 'admin@nexis.test');
+$documents->save(new PageId($termsDe), $defaultContent->termsDocument('de'), null, $actor, 'Seed');
+$termsDePage = $pages->findById(new PageId($termsDe));
+if ($termsDePage === null) {
+    throw new RuntimeException('terms de missing');
+}
+$publish->publish($termsDePage, null, $actor, $basePath);
+$documents->save(new PageId($termsEn), $defaultContent->termsDocument('en'), null, $actor, 'Seed');
+$termsEnPage = $pages->findById(new PageId($termsEn));
+if ($termsEnPage === null) {
+    throw new RuntimeException('terms en missing');
+}
+$publish->publish($termsEnPage, null, $actor, $basePath);
+
 $footerDe = Uuid::v7();
 $footerEn = Uuid::v7();
 insert($pdo, 'menus', [
@@ -946,6 +995,17 @@ insert($pdo, 'menu_items', [
 ]);
 insert($pdo, 'menu_items', [
     'id' => Uuid::v7(),
+    'menu_id' => $footerDe,
+    'parent_id' => null,
+    'page_id' => $termsDe,
+    'label' => 'AGB',
+    'url' => null,
+    'sort_order' => 2,
+    'created_at' => $now,
+    'updated_at' => $now,
+]);
+insert($pdo, 'menu_items', [
+    'id' => Uuid::v7(),
     'menu_id' => $footerEn,
     'parent_id' => null,
     'page_id' => $imprintEn,
@@ -963,6 +1023,17 @@ insert($pdo, 'menu_items', [
     'label' => 'Privacy',
     'url' => null,
     'sort_order' => 1,
+    'created_at' => $now,
+    'updated_at' => $now,
+]);
+insert($pdo, 'menu_items', [
+    'id' => Uuid::v7(),
+    'menu_id' => $footerEn,
+    'parent_id' => null,
+    'page_id' => $termsEn,
+    'label' => 'Terms',
+    'url' => null,
+    'sort_order' => 2,
     'created_at' => $now,
     'updated_at' => $now,
 ]);

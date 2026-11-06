@@ -11,7 +11,7 @@ final class Nexis
 {
     public const NAME = 'Nexis';
 
-    public const VERSION = '0.4.0';
+    public const VERSION = '0.4.1';
 
     public const TAGLINE = 'Individualisierbarer Homepage-Builder';
 

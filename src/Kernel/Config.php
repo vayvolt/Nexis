@@ -50,7 +50,23 @@ final class Config
                 'max_bytes' => max(1, (int) self::env('MEDIA_MAX_BYTES', '10485760')),
                 'max_pixels' => max(1, (int) self::env('MEDIA_MAX_PIXELS', '25000000')),
             ],
+            'retention' => [
+                'audit_days' => self::intEnv('AUDIT_RETENTION_DAYS', 180, 30),
+                'forms_days' => self::intEnv('FORMS_RETENTION_DAYS', 365, 30),
+            ],
         ], $rootPath);
+    }
+
+    /** Audit-log purge window used by `bin/queue-work.php` (days, min 30). */
+    public function auditRetentionDays(): int
+    {
+        return (int) $this->get('retention.audit_days', 180);
+    }
+
+    /** Form-submission purge window used by `bin/queue-work.php` (days, min 30). */
+    public function formsRetentionDays(): int
+    {
+        return (int) $this->get('retention.forms_days', 365);
     }
 
     public function get(string $key, mixed $default = null): mixed
@@ -119,5 +135,15 @@ final class Config
         }
 
         return $value;
+    }
+
+    private static function intEnv(string $key, int $default, int $min): int
+    {
+        $raw = self::env($key, (string) $default);
+        if (!is_numeric($raw)) {
+            return max($min, $default);
+        }
+
+        return max($min, (int) $raw);
     }
 }

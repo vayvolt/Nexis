@@ -25,6 +25,7 @@ $flash = match ((string) ($saved ?? '')) {
     <a href="#profile"><?php echo $e($t('account.dashboard.nav_profile')) ?></a>
     <a href="#password"><?php echo $e($t('account.dashboard.nav_password')) ?></a>
     <a href="#security"><?php echo $e($t('account.dashboard.nav_security')) ?></a>
+    <a href="#privacy"><?php echo $e($t('account.dashboard.nav_privacy')) ?></a>
     <?php if (!empty($canDeleteAccount)): ?><a href="#danger"><?php echo $e($t('account.dashboard.nav_account')) ?></a><?php endif; ?>
     <?php foreach ($accountPluginNav ?? [] as $navHtml): ?>
         <?php echo $navHtml ?>
@@ -101,6 +102,12 @@ $flash = match ((string) ($saved ?? '')) {
             <button type="submit"><?php echo $e($t('account.dashboard.totp_setup')) ?></button>
         </form>
     <?php endif; ?>
+</div>
+
+<div class="card" id="privacy">
+    <h2><?php echo $e($t('account.dashboard.privacy_title')) ?></h2>
+    <p class="muted"><?php echo $e($t('account.dashboard.privacy_intro')) ?></p>
+    <p><a class="btn" href="<?php echo $e($basePath) ?>/account/export"><?php echo $e($t('account.dashboard.privacy_export')) ?></a></p>
 </div>
 
 <?php if (!empty($canDeleteAccount)): ?>

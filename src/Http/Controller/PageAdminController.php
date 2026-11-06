@@ -22,6 +22,7 @@ use Nexis\Http\RequestInput;
 use Nexis\Http\ResponseFactory;
 use Nexis\Http\ViewRenderer;
 use Nexis\I18n\AdminUi;
+use Nexis\Install\LegalPagesSeeder;
 use Nexis\Site\LocalePathResolver;
 use Nexis\Site\Site;
 use Nexis\Site\SiteId;
@@ -46,6 +47,7 @@ final class PageAdminController
         private PageNavigationSync $navigation,
         private AdminContentLocale $contentLocale,
         private AdminUi $ui,
+        private LegalPagesSeeder $legalPages,
     ) {
     }
 
@@ -59,6 +61,8 @@ final class PageAdminController
         $locale = $this->contentLocale->resolve($site, $request);
         $query = $request->getQueryParams();
         $pageGroups = $this->pages->listGroupedByType($site->id, PageType::PAGE, $locale, $site->defaultLocale);
+        $canEdit = $this->policy->can($user, $site, Permission::CONTENT_PAGE_EDIT);
+        $canPublish = $this->policy->can($user, $site, Permission::CONTENT_PAGE_PUBLISH);
 
         return $this->responses->html($this->views->render('admin.pages.index', [
             'user' => $user,
@@ -69,9 +73,39 @@ final class PageAdminController
             'basePath' => $basePath,
             'csrf' => (string) $request->getAttribute('csrf', ''),
             'deleted' => ($query['deleted'] ?? '') === '1',
+            'legalSeeded' => ($query['legal_seeded'] ?? '') === '1',
+            'legalCreated' => is_string($query['legal_created'] ?? null) ? (string) $query['legal_created'] : '0',
             'error' => is_string($query['error'] ?? null) ? (string) $query['error'] : '',
-            'canEditContent' => $this->policy->can($user, $site, Permission::CONTENT_PAGE_EDIT),
+            'canEditContent' => $canEdit,
+            'canSeedLegal' => $canEdit && $canPublish,
+            'legalGaps' => $this->legalPages->gaps($site),
         ], 'admin.layout'));
+    }
+
+    public function seedLegal(ServerRequestInterface $request): ResponseInterface
+    {
+        $ctx = $this->context($request);
+        if ($ctx instanceof ResponseInterface) {
+            return $ctx;
+        }
+        [$user, $site, $basePath] = $ctx;
+        if (
+            !$this->policy->can($user, $site, Permission::CONTENT_PAGE_EDIT)
+            || !$this->policy->can($user, $site, Permission::CONTENT_PAGE_PUBLISH)
+        ) {
+            return $this->responses->html(
+                $this->ui->get($user, 'admin.error.no_access_permission', ['permission' => 'content.page.publish']),
+                403,
+            );
+        }
+
+        $result = $this->legalPages->ensure($site, $user->id, $basePath, $user->email);
+        $locale = $this->contentLocale->resolve($site, $request);
+
+        return $this->responses->redirect(
+            $basePath . '/admin/pages?locale=' . rawurlencode($locale)
+            . '&legal_seeded=1&legal_created=' . rawurlencode((string) count($result['created'])),
+        );
     }
 
     public function createForm(ServerRequestInterface $request): ResponseInterface

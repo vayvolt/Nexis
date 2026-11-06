@@ -378,6 +378,90 @@ final class PdoUserRepository implements UserRepository, MembershipLookup
         return (int) $stmt->fetchColumn();
     }
 
+    public function exportPersonalData(UserId $id, SiteId $siteId): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT id, email, display_name, ui_locale, is_platform_admin, email_verified_at,
+                    last_login_at, created_at, updated_at,
+                    CASE WHEN totp_secret IS NOT NULL AND totp_secret <> \'\' THEN 1 ELSE 0 END AS totp_enabled
+             FROM users
+             WHERE id = :id AND deleted_at IS NULL
+             LIMIT 1',
+        );
+        $stmt->execute(['id' => $id->value]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($row)) {
+            return [];
+        }
+
+        $roleStmt = $this->pdo->prepare(
+            'SELECT r.slug, r.name, m.created_at AS membership_since
+             FROM site_memberships m
+             INNER JOIN roles r ON r.id = m.role_id
+             WHERE m.user_id = :user_id AND m.site_id = :site_id
+             LIMIT 1',
+        );
+        $roleStmt->execute([
+            'user_id' => $id->value,
+            'site_id' => $siteId->value,
+        ]);
+        $role = $roleStmt->fetch(PDO::FETCH_ASSOC);
+
+        $audit = [];
+        try {
+            $auditStmt = $this->pdo->prepare(
+                'SELECT action, entity_type, entity_id, context, created_at
+                 FROM audit_log
+                 WHERE actor_id = :actor_id
+                 ORDER BY created_at DESC
+                 LIMIT 50',
+            );
+            $auditStmt->execute(['actor_id' => $id->value]);
+            foreach ($auditStmt->fetchAll(PDO::FETCH_ASSOC) as $entry) {
+                if (!is_array($entry)) {
+                    continue;
+                }
+                $context = $entry['context'] ?? null;
+                if (is_string($context) && $context !== '') {
+                    $decoded = json_decode($context, true);
+                    $context = is_array($decoded) ? $decoded : $context;
+                }
+                $audit[] = [
+                    'action' => (string) ($entry['action'] ?? ''),
+                    'entityType' => $entry['entity_type'] ?? null,
+                    'entityId' => $entry['entity_id'] ?? null,
+                    'context' => $context,
+                    'createdAt' => $entry['created_at'] ?? null,
+                ];
+            }
+        } catch (\Throwable) {
+            $audit = [];
+        }
+
+        return [
+            'exportedAt' => gmdate('c'),
+            'siteId' => $siteId->value,
+            'account' => [
+                'id' => (string) $row['id'],
+                'email' => (string) $row['email'],
+                'displayName' => (string) $row['display_name'],
+                'uiLocale' => (string) $row['ui_locale'],
+                'isPlatformAdmin' => (int) ($row['is_platform_admin'] ?? 0) === 1,
+                'emailVerifiedAt' => $row['email_verified_at'] ?? null,
+                'lastLoginAt' => $row['last_login_at'] ?? null,
+                'createdAt' => $row['created_at'] ?? null,
+                'updatedAt' => $row['updated_at'] ?? null,
+                'twoFactorEnabled' => (int) ($row['totp_enabled'] ?? 0) === 1,
+            ],
+            'membership' => is_array($role) ? [
+                'roleSlug' => (string) ($role['slug'] ?? ''),
+                'roleName' => (string) ($role['name'] ?? ''),
+                'since' => $role['membership_since'] ?? null,
+            ] : null,
+            'recentAuditActions' => $audit,
+        ];
+    }
+
     public function hasAccess(UserId $userId, SiteId $siteId): bool
     {
         $stmt = $this->pdo->prepare(

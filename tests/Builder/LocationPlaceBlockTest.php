@@ -36,8 +36,26 @@ final class LocationPlaceBlockTest extends TestCase
                 'lat' => '52.52',
                 'lon' => '13.405',
             ],
-        ], []);
+        ], ['locale' => 'de']);
         self::assertStringContainsString('openstreetmap.org/export/embed', $html);
-        self::assertStringContainsString('iframe', $html);
+        self::assertStringContainsString('data-src=', $html);
+        self::assertStringContainsString('data-nx-map-load', $html);
+        self::assertStringContainsString('Karte laden', $html);
+        self::assertStringNotContainsString('<iframe', $html);
+    }
+
+    public function testMapLabelsUseEnglishLocale(): void
+    {
+        $html = (new LocationPlaceBlock())->render([
+            'type' => 'nexis/location/place',
+            'props' => [
+                'lat' => '52.52',
+                'lon' => '13.405',
+                'hours' => '9–17',
+            ],
+        ], ['locale' => 'en']);
+        self::assertStringContainsString('Load map', $html);
+        self::assertStringContainsString('Opening hours', $html);
+        self::assertStringContainsString('Larger map', $html);
     }
 }

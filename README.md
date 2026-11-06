@@ -6,7 +6,7 @@ Eine Installation verwaltet **eine Website**. Themes, Branding und Plugins erwei
 - Portal & Downloads: [nexis.vayvolt.de](https://nexis.vayvolt.de/)
 - Quellcode: [github.com/vayvolt/Nexis](https://github.com/vayvolt/Nexis)
 
-Aktuell **0.4.0**: Block-Builder, Admin-/Public-i18n (de/en), First-Party-Plugins, optionaler Plugin-/Theme-Marktplatz, Backups/Upgrade, Rollen-Matrix. Die REST-API (`/api/v1`) liest und schreibt den Kern (Website, Seiten, Übersetzungen, Builder-Dokument mit `If-Match`, Publish/Revert, Medien-Upload, Plugin-Status, Theme-Tokens, Block-Registry) inkl. API-Tokens.
+Aktuell **0.4.1**: Block-Builder, Admin-/Public-i18n (de/en), First-Party-Plugins, optionaler Plugin-/Theme-Marktplatz, Backups/Upgrade, Rollen-Matrix, Launch-Härte (Legal-Seeds, Consent, A11y, Retention, DSAR-Export). Die REST-API (`/api/v1`) liest und schreibt den Kern (Website, Seiten, Übersetzungen, Builder-Dokument mit `If-Match`, Publish/Revert, Medien-Upload, Plugin-Status, Theme-Tokens, Block-Registry) inkl. API-Tokens.
 
 ## Voraussetzungen
 
@@ -32,6 +32,7 @@ Der Installer legt `.env`, Datenbank und Admin-Konto an und kann First-Party-Plu
 3. Datenbank anlegen: `CREATE DATABASE nexis CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`
 4. `php bin/migrate.php`
 5. Optional: `php bin/seed.php` (Demo-Website und Konten; Passwörter in der Ausgabe)
+6. Bestehende Installationen ohne AGB/Impressum/Datenschutz: `php bin/seed-legal-pages.php` (oder Admin → Seiten)
 
 ## Nach der Installation
 

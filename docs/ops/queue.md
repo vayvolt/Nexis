@@ -10,6 +10,8 @@ Das Script bootet aktivierte Plugins (damit `JobHandler` / Mail-Typen greifen), 
 
 Zum Abschluss prüft der Worker einmal pro Lauf den Backup-Planer aus `/admin/backups` und erstellt bei Fälligkeit ein Backup samt Aufräumen alter Stempel. Wer keinen Queue-Worker betreibt, ruft stattdessen `php bin/backup.php --scheduled` per Cron auf — siehe [restore.md](restore.md).
 
+Purge-Fenster: Audit-Log (`AUDIT_RETENTION_DAYS`, Default 180) und Formular-Einreichungen (`FORMS_RETENTION_DAYS`, Default 365) — Details [retention.md](retention.md).
+
 ## Cron (empfohlen, einfach)
 
 Jede Minute:

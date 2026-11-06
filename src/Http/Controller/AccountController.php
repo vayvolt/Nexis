@@ -118,6 +118,40 @@ final class AccountController
         ], $t->get('account.dashboard.title'), userLocale: $user->uiLocale);
     }
 
+    public function exportData(ServerRequestInterface $request): ResponseInterface
+    {
+        $ctx = $this->siteContext($request);
+        if ($ctx instanceof ResponseInterface) {
+            return $ctx;
+        }
+        [$site, $basePath] = $ctx;
+        $user = $this->requireUser($request, $basePath);
+        if ($user instanceof ResponseInterface) {
+            return $user;
+        }
+
+        $payload = $this->users->exportPersonalData($user->id, $site->id);
+        if ($payload === []) {
+            return $this->responses->redirect($basePath . '/account?error=export_failed');
+        }
+
+        $this->audit->log(
+            'account.data_exported',
+            $site->id,
+            $user->id,
+            'user',
+            $user->id->value,
+            [],
+            $this->security->clientIp($request),
+        );
+
+        $filename = 'nexis-account-export-' . gmdate('Ymd-His') . '.json';
+
+        return $this->responses->json($payload)
+            ->withHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
+            ->withHeader('Cache-Control', 'no-store');
+    }
+
     public function showLogin(ServerRequestInterface $request): ResponseInterface
     {
         $ctx = $this->siteContext($request);
@@ -241,9 +275,13 @@ final class AccountController
             return $this->responses->redirect($basePath . '/account');
         }
 
+        $legal = $this->legalPageUrls($site, $basePath, $t->locale());
+
         return $this->renderAccount($request, $site, $basePath, 'account.register', [
             'csrf' => (string) $request->getAttribute('csrf', ''),
             'error' => '',
+            'privacyUrl' => $legal['privacy'],
+            'termsUrl' => $legal['terms'],
         ], $t->get('account.register.title'));
     }
 
@@ -255,14 +293,37 @@ final class AccountController
         }
         [$site, $basePath] = $ctx;
         $t = $this->translatorFor($request);
+        $legal = $this->legalPageUrls($site, $basePath, $t->locale());
+        $accepted = RequestInput::string($request, 'accept_legal') === '1';
+        if (!$accepted) {
+            return $this->renderAccount($request, $site, $basePath, 'account.register', [
+                'csrf' => (string) $request->getAttribute('csrf', ''),
+                'error' => $t->get('account.register.accept_required'),
+                'privacyUrl' => $legal['privacy'],
+                'termsUrl' => $legal['terms'],
+            ], $t->get('account.register.title'), 422);
+        }
         try {
-            $this->registration->register(
+            $user = $this->registration->register(
                 $site,
                 RequestInput::string($request, 'email'),
                 RequestInput::string($request, 'display_name'),
                 RequestInput::string($request, 'password'),
                 (string) $this->config->get('app.url', ''),
                 $basePath,
+                $this->security->clientIp($request),
+            );
+            $this->audit->log(
+                'auth.registration.legal_accepted',
+                $site->id,
+                $user->id,
+                'user',
+                $user->id->value,
+                [
+                    'privacyUrl' => $legal['privacy'],
+                    'termsUrl' => $legal['terms'],
+                    'locale' => $t->locale(),
+                ],
                 $this->security->clientIp($request),
             );
 
@@ -280,6 +341,8 @@ final class AccountController
             return $this->renderAccount($request, $site, $basePath, 'account.register', [
                 'csrf' => (string) $request->getAttribute('csrf', ''),
                 'error' => $message,
+                'privacyUrl' => $legal['privacy'],
+                'termsUrl' => $legal['terms'],
             ], $t->get('account.register.title'), 422);
         }
     }
@@ -623,6 +686,7 @@ final class AccountController
                     'ariaLocales' => $translator->get('theme.nav.locales'),
                     'ariaFooter' => $translator->get('theme.nav.footer'),
                     'unavailable' => $translator->get('theme.locale.unavailable'),
+                    'skipToContent' => $translator->get('theme.nav.skip'),
                 ],
                 'layout' => $theme['layout'],
                 'basePath' => $basePath,
@@ -638,6 +702,23 @@ final class AccountController
         }
 
         return $this->responses->html($html, $status);
+    }
+
+    /**
+     * Locale-aware URLs for seeded legal pages (privacy + terms).
+     *
+     * @return array{privacy: string, terms: string}
+     */
+    private function legalPageUrls(Site $site, string $basePath, string $uiLocale): array
+    {
+        $locale = $site->locale($uiLocale) !== null ? $uiLocale : $site->defaultLocale;
+        $privacyPath = $locale === 'en' ? '/privacy' : '/datenschutz';
+        $termsPath = $locale === 'en' ? '/terms' : '/agb';
+
+        return [
+            'privacy' => $this->paths->url($site, $locale, $privacyPath, $basePath),
+            'terms' => $this->paths->url($site, $locale, $termsPath, $basePath),
+        ];
     }
 
     /**

@@ -63,4 +63,11 @@ interface UserRepository
     public function countWithRoleSlug(SiteId $siteId, string $slug): int;
 
     public function countPlatformAdmins(): int;
+
+    /**
+     * Subject-access export for the account holder (no secrets).
+     *
+     * @return array<string, mixed>
+     */
+    public function exportPersonalData(UserId $id, SiteId $siteId): array;
 }
