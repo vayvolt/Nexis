@@ -68,11 +68,8 @@ final class CorsMiddlewareTest extends TestCase
     public function testOptionsPreflightShortCircuits(): void
     {
         $middleware = $this->middleware('https://app.example');
-        $called = false;
-        $handler = new class ($called) implements RequestHandlerInterface {
-            public function __construct(private bool &$called)
-            {
-            }
+        $handler = new class implements RequestHandlerInterface {
+            public bool $called = false;
 
             public function handle(ServerRequestInterface $request): ResponseInterface
             {
@@ -89,7 +86,7 @@ final class CorsMiddlewareTest extends TestCase
             $handler,
         );
 
-        self::assertFalse($called);
+        self::assertFalse($handler->called);
         self::assertSame(204, $response->getStatusCode());
         self::assertSame('https://app.example', $response->getHeaderLine('Access-Control-Allow-Origin'));
         self::assertStringContainsString('Authorization', $response->getHeaderLine('Access-Control-Allow-Headers'));
@@ -133,6 +130,9 @@ final class CorsMiddlewareTest extends TestCase
         return new CorsMiddleware($config, new ResponseFactory($psr17, $psr17));
     }
 
+    /**
+     * @param array<string, string> $headers
+     */
     private function handler(int $status, array $headers = []): RequestHandlerInterface
     {
         return new class ($status, $headers) implements RequestHandlerInterface {

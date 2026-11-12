@@ -19,7 +19,15 @@ final class PackReleaseManifestTest extends TestCase
         $this->root = dirname(__DIR__, 2);
         $loaded = require $this->root . '/bin/pack-release-manifest.php';
         self::assertIsArray($loaded);
-        $this->manifest = $loaded;
+        self::assertArrayHasKey('plugins', $loaded);
+        self::assertArrayHasKey('themes', $loaded);
+        self::assertArrayHasKey('forbidden', $loaded);
+        self::assertIsList($loaded['plugins']);
+        self::assertIsList($loaded['themes']);
+        self::assertIsList($loaded['forbidden']);
+        /** @var array{plugins: list<string>, themes: list<string>, forbidden: list<string>} $manifest */
+        $manifest = $loaded;
+        $this->manifest = $manifest;
         require_once $this->root . '/bin/pack-release-lib.php';
     }
 
