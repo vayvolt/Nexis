@@ -92,6 +92,6 @@ final class ContentBlocksTest extends TestCase
         ], []);
         self::assertStringContainsString('<th scope="col">Name</th>', $html);
         self::assertStringContainsString('<td>Ada</td>', $html);
-        self::assertStringContainsString('<caption>Personen</caption>', $html);
+        self::assertStringContainsString('<p class="bk-table__caption">Personen</p>', $html);
     }
 }

@@ -18,7 +18,7 @@ final class BlockRegistryCatalogTest extends TestCase
         self::assertCount(2, $catalog);
         self::assertSame('core/section', $catalog[0]['type']);
         self::assertTrue($catalog[0]['allowsChildren']);
-        self::assertSame(['width' => 'wide', 'padding' => 'lg'], $catalog[0]['defaultProps']);
+        self::assertSame(['width' => 'wide', 'padding' => 'lg', 'anchor' => ''], $catalog[0]['defaultProps']);
         self::assertFalse($catalog[1]['allowsChildren']);
     }
 }

@@ -50,7 +50,7 @@ final class PluginUninstallerTest extends TestCase
             'id' => 'acme/demo',
             'name' => 'Demo',
             'version' => '1.0.0',
-            'compatibleCore' => '^0.4',
+            'compatibleCore' => '^0.5',
             'autoload' => 'Acme\\Demo\\',
             'provider' => 'Acme\\Demo\\DemoServiceProvider',
         ], JSON_THROW_ON_ERROR));

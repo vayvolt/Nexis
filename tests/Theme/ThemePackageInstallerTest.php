@@ -41,7 +41,7 @@ final class ThemePackageInstallerTest extends TestCase
                 'id' => 'acme/plain',
                 'name' => 'Plain',
                 'version' => '1.0.0',
-                'compatibleCore' => '^0.4',
+                'compatibleCore' => '^0.5',
                 'templates' => ['page' => 'templates/page.twig'],
                 'tokens' => 'tokens.json',
             ], JSON_THROW_ON_ERROR),
@@ -105,7 +105,7 @@ final class ThemePackageInstallerTest extends TestCase
             'id' => 'acme/plain',
             'name' => 'Plain',
             'version' => '0.9.0',
-            'compatibleCore' => '^0.4',
+            'compatibleCore' => '^0.5',
         ], JSON_THROW_ON_ERROR);
         file_put_contents($target . DIRECTORY_SEPARATOR . 'theme.json', $json);
 
