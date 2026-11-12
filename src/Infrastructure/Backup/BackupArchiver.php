@@ -12,8 +12,8 @@ use SplFileInfo;
 use ZipArchive;
 
 /**
- * Packs one backup stamp into a ZIP for download. Archives are built in
- * storage/tmp/ and cleaned up on the next download request.
+ * Serves backup ZIPs for download. New backups are already `{stamp}.zip`;
+ * legacy directories are packed into storage/tmp/ on demand.
  */
 final class BackupArchiver
 {
@@ -27,10 +27,15 @@ final class BackupArchiver
     }
 
     /**
-     * @return string absolute path of the created archive
+     * @return string absolute path of the archive to stream
      */
     public function zip(string $stamp): string
     {
+        $stored = $this->backup->zipPathFor($stamp);
+        if ($stored !== null && is_file($stored)) {
+            return $stored;
+        }
+
         $dir = $this->backup->pathFor($stamp);
         if ($dir === null || !is_dir($dir)) {
             throw new RuntimeException('Backup missing: ' . $stamp);
@@ -61,9 +66,9 @@ final class BackupArchiver
                 continue;
             }
             if ($file->isDir()) {
-                $zip->addEmptyDir($stamp . '/' . $relative);
+                $zip->addEmptyDir($relative);
             } elseif ($file->isFile()) {
-                $zip->addFile($file->getPathname(), $stamp . '/' . $relative);
+                $zip->addFile($file->getPathname(), $relative);
             }
         }
 
@@ -71,6 +76,55 @@ final class BackupArchiver
             @unlink($target);
 
             throw new RuntimeException('ZIP konnte nicht geschrieben werden.');
+        }
+
+        return $target;
+    }
+
+    /**
+     * Absolute path to database.sql for download (legacy dir or extracted from ZIP).
+     */
+    public function sqlFile(string $stamp): string
+    {
+        $dir = $this->backup->pathFor($stamp);
+        if ($dir !== null && is_file($dir . DIRECTORY_SEPARATOR . 'database.sql')) {
+            return $dir . DIRECTORY_SEPARATOR . 'database.sql';
+        }
+
+        $stored = $this->backup->zipPathFor($stamp);
+        if ($stored === null || !is_file($stored) || !class_exists(ZipArchive::class)) {
+            throw new RuntimeException('Backup dump missing: ' . $stamp);
+        }
+        if (!is_dir($this->tmpPath) && !mkdir($this->tmpPath, 0775, true) && !is_dir($this->tmpPath)) {
+            throw new RuntimeException('Temp-Verzeichnis fehlt: ' . $this->tmpPath);
+        }
+        $this->pruneStale();
+
+        $zip = new ZipArchive();
+        if ($zip->open($stored) !== true) {
+            throw new RuntimeException('Backup-ZIP konnte nicht geöffnet werden.');
+        }
+        $name = null;
+        foreach (['database.sql', $stamp . '/database.sql'] as $candidate) {
+            if ($zip->locateName($candidate) !== false) {
+                $name = $candidate;
+                break;
+            }
+        }
+        if ($name === null) {
+            $zip->close();
+            throw new RuntimeException('database.sql fehlt im Backup.');
+        }
+        $raw = $zip->getFromName($name);
+        $zip->close();
+        if (!is_string($raw) || $raw === '') {
+            throw new RuntimeException('database.sql leer.');
+        }
+
+        $target = $this->tmpPath . DIRECTORY_SEPARATOR
+            . 'nexis-backup-' . $stamp . '-' . bin2hex(random_bytes(4)) . '.sql';
+        if (file_put_contents($target, $raw) === false) {
+            throw new RuntimeException('Dump konnte nicht extrahiert werden.');
         }
 
         return $target;
@@ -87,15 +141,17 @@ final class BackupArchiver
 
     private function pruneStale(): void
     {
-        $items = glob($this->tmpPath . DIRECTORY_SEPARATOR . 'nexis-backup-*.zip');
-        if ($items === false) {
-            return;
-        }
-        $cutoff = time() - self::STALE_SECONDS;
-        foreach ($items as $item) {
-            $mtime = filemtime($item);
-            if ($mtime !== false && $mtime < $cutoff) {
-                @unlink($item);
+        foreach (['nexis-backup-*.zip', 'nexis-backup-*.sql'] as $pattern) {
+            $items = glob($this->tmpPath . DIRECTORY_SEPARATOR . $pattern);
+            if ($items === false) {
+                continue;
+            }
+            $cutoff = time() - self::STALE_SECONDS;
+            foreach ($items as $item) {
+                $mtime = filemtime($item);
+                if ($mtime !== false && $mtime < $cutoff) {
+                    @unlink($item);
+                }
             }
         }
     }

@@ -8,7 +8,8 @@ use RuntimeException;
 use Throwable;
 
 /**
- * Logical MariaDB dump + storage/media copy under storage/backups/{stamp}/.
+ * Logical MariaDB dump + storage/media → storage/backups/{stamp}.zip.
+ * Legacy exploded directories under storage/backups/{stamp}/ remain readable.
  * Used by CLI (bin/backup.php, bin/restore.php), the admin UI and the web installer wipe path.
  */
 final class LogicalBackup
@@ -28,9 +29,15 @@ final class LogicalBackup
     public function create(array $db, ?string $appUrl = null, bool $includeMedia = true): array
     {
         $stamp = $this->freeStamp();
-        $backupRoot = $this->backupsRoot() . DIRECTORY_SEPARATOR . $stamp;
-        if (is_dir($backupRoot) || !@mkdir($backupRoot, 0775, true)) {
-            throw new RuntimeException('Backup directory could not be created: ' . $stamp);
+        $root = $this->backupsRoot();
+        if (!is_dir($root) && !@mkdir($root, 0775, true) && !is_dir($root)) {
+            throw new RuntimeException('Backup directory could not be created.');
+        }
+
+        $workDir = $root . DIRECTORY_SEPARATOR . $stamp;
+        $zipPath = $this->zipPathFor($stamp);
+        if ($zipPath === null || is_dir($workDir) || is_file($zipPath) || !@mkdir($workDir, 0775, true)) {
+            throw new RuntimeException('Backup workspace could not be created: ' . $stamp);
         }
 
         try {
@@ -41,14 +48,15 @@ final class LogicalBackup
                 );
             }
 
-            $sqlFile = $backupRoot . DIRECTORY_SEPARATOR . 'database.sql';
+            $sqlFile = $workDir . DIRECTORY_SEPARATOR . 'database.sql';
+            // No --routines: MariaDB upgrades often break mysql.proc until
+            // mariadb-upgrade runs; Nexis core does not ship stored routines.
             $args = [
                 $mysqldump,
                 '--host=' . $db['host'],
                 '--port=' . ($db['port'] !== '' ? $db['port'] : '3306'),
                 '--user=' . $db['username'],
                 '--single-transaction',
-                '--routines',
                 '--triggers',
                 '--result-file=' . $sqlFile,
                 $db['database'],
@@ -57,13 +65,14 @@ final class LogicalBackup
                 array_splice($args, 4, 0, '--password=' . $db['password']);
             }
 
-            $code = $this->runCommand($args);
-            if ($code !== 0 || !is_file($sqlFile) || filesize($sqlFile) <= 0) {
-                throw new RuntimeException('mysqldump failed (exit ' . $code . ').');
+            $ran = $this->runCommand($args);
+            if ($ran['code'] !== 0 || !is_file($sqlFile) || filesize($sqlFile) <= 0) {
+                $detail = $ran['output'] !== '' ? ' ' . $ran['output'] : '';
+                throw new RuntimeException('mysqldump failed (exit ' . $ran['code'] . ').' . $detail);
             }
 
             $mediaSrc = $this->rootPath . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'media';
-            $mediaDst = $backupRoot . DIRECTORY_SEPARATOR . 'media';
+            $mediaDst = $workDir . DIRECTORY_SEPARATOR . 'media';
             $mediaCopied = false;
             if ($includeMedia && is_dir($mediaSrc)) {
                 $this->copyTree($mediaSrc, $mediaDst);
@@ -82,15 +91,26 @@ final class LogicalBackup
                 'database_ok' => true,
                 'media_ok' => $includeMedia,
                 'mysqldump' => $mysqldump,
+                'format' => 'zip',
             ];
             file_put_contents(
-                $backupRoot . DIRECTORY_SEPARATOR . 'manifest.json',
+                $workDir . DIRECTORY_SEPARATOR . 'manifest.json',
                 json_encode($meta, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
             );
 
-            return ['stamp' => $stamp, 'path' => $backupRoot];
+            $this->packDirectoryToZip($workDir, $zipPath);
+            $this->removeTree($workDir);
+
+            if (!is_file($zipPath) || filesize($zipPath) <= 0) {
+                throw new RuntimeException('Backup ZIP could not be written: ' . $stamp);
+            }
+
+            return ['stamp' => $stamp, 'path' => $zipPath];
         } catch (Throwable $e) {
-            $this->removeTree($backupRoot);
+            $this->removeTree($workDir);
+            if (is_file($zipPath)) {
+                @unlink($zipPath);
+            }
             throw $e;
         }
     }
@@ -100,61 +120,68 @@ final class LogicalBackup
      */
     public function restore(array $db, string $stamp, bool $withMedia = true): void
     {
-        $backupDir = $this->pathFor($stamp);
-        if ($backupDir === null) {
+        if (!self::isStamp($stamp)) {
             throw new RuntimeException('Invalid backup stamp.');
         }
 
-        $sqlFile = $backupDir . DIRECTORY_SEPARATOR . 'database.sql';
-        if (!is_dir($backupDir) || !is_file($sqlFile) || filesize($sqlFile) <= 0) {
-            throw new RuntimeException('Backup missing or database.sql empty: ' . $stamp);
-        }
-
-        $manifestFile = $backupDir . DIRECTORY_SEPARATOR . 'manifest.json';
-        if (is_file($manifestFile)) {
-            $decoded = json_decode((string) file_get_contents($manifestFile), true);
-            if (is_array($decoded) && array_key_exists('database_ok', $decoded) && $decoded['database_ok'] !== true) {
-                throw new RuntimeException('Backup marked incomplete in manifest.');
+        $extractDir = null;
+        try {
+            $backupDir = $this->materialize($stamp, $extractDir);
+            $sqlFile = $backupDir . DIRECTORY_SEPARATOR . 'database.sql';
+            if (!is_file($sqlFile) || filesize($sqlFile) <= 0) {
+                throw new RuntimeException('Backup missing or database.sql empty: ' . $stamp);
             }
-        }
 
-        $mysql = $this->resolveMysql();
-        if ($mysql === null) {
-            throw new RuntimeException('mysql client not found. Set MYSQL_PATH or add mysql to PATH.');
-        }
-
-        $args = [
-            $mysql,
-            '--host=' . $db['host'],
-            '--port=' . ($db['port'] !== '' ? $db['port'] : '3306'),
-            '--user=' . $db['username'],
-        ];
-        if ($db['password'] !== '') {
-            $args[] = '--password=' . $db['password'];
-        }
-        $args[] = $db['database'];
-
-        $code = $this->runCommandWithStdin($args, $sqlFile);
-        if ($code !== 0) {
-            throw new RuntimeException('mysql restore failed (exit ' . $code . ').');
-        }
-
-        if ($withMedia) {
-            $mediaSrc = $backupDir . DIRECTORY_SEPARATOR . 'media';
-            $mediaDst = $this->rootPath . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'media';
-            if (is_dir($mediaSrc)) {
-                if (is_dir($mediaDst)) {
-                    $this->removeTree($mediaDst);
+            $manifestFile = $backupDir . DIRECTORY_SEPARATOR . 'manifest.json';
+            if (is_file($manifestFile)) {
+                $decoded = json_decode((string) file_get_contents($manifestFile), true);
+                if (is_array($decoded) && array_key_exists('database_ok', $decoded) && $decoded['database_ok'] !== true) {
+                    throw new RuntimeException('Backup marked incomplete in manifest.');
                 }
-                $this->copyTree($mediaSrc, $mediaDst);
             }
-        }
 
-        $pageCache = $this->rootPath . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'cache'
-            . DIRECTORY_SEPARATOR . 'pages';
-        if (is_dir($pageCache)) {
-            $this->removeTree($pageCache);
-            @mkdir($pageCache, 0775, true);
+            $mysql = $this->resolveMysql();
+            if ($mysql === null) {
+                throw new RuntimeException('mysql client not found. Set MYSQL_PATH or add mysql to PATH.');
+            }
+
+            $args = [
+                $mysql,
+                '--host=' . $db['host'],
+                '--port=' . ($db['port'] !== '' ? $db['port'] : '3306'),
+                '--user=' . $db['username'],
+            ];
+            if ($db['password'] !== '') {
+                $args[] = '--password=' . $db['password'];
+            }
+            $args[] = $db['database'];
+
+            $code = $this->runCommandWithStdin($args, $sqlFile);
+            if ($code !== 0) {
+                throw new RuntimeException('mysql restore failed (exit ' . $code . ').');
+            }
+
+            if ($withMedia) {
+                $mediaSrc = $backupDir . DIRECTORY_SEPARATOR . 'media';
+                $mediaDst = $this->rootPath . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'media';
+                if (is_dir($mediaSrc)) {
+                    if (is_dir($mediaDst)) {
+                        $this->removeTree($mediaDst);
+                    }
+                    $this->copyTree($mediaSrc, $mediaDst);
+                }
+            }
+
+            $pageCache = $this->rootPath . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'cache'
+                . DIRECTORY_SEPARATOR . 'pages';
+            if (is_dir($pageCache)) {
+                $this->removeTree($pageCache);
+                @mkdir($pageCache, 0775, true);
+            }
+        } finally {
+            if ($extractDir !== null) {
+                $this->removeTree($extractDir);
+            }
         }
     }
 
@@ -166,14 +193,14 @@ final class LogicalBackup
     /**
      * Stamps have second resolution, so a manual and a scheduled backup can
      * collide. Advance until a free one is found instead of writing two dumps
-     * into the same directory.
+     * into the same stamp (directory or ZIP).
      */
     private function freeStamp(): string
     {
         $now = time();
         for ($offset = 0; $offset < 120; $offset++) {
             $stamp = gmdate('Ymd-His', $now + $offset);
-            if (!is_dir($this->backupsRoot() . DIRECTORY_SEPARATOR . $stamp)) {
+            if (!$this->exists($stamp)) {
                 return $stamp;
             }
         }
@@ -199,13 +226,135 @@ final class LogicalBackup
         return $this->backupsRoot() . DIRECTORY_SEPARATOR . $stamp;
     }
 
-    public function delete(string $stamp): bool
+    /**
+     * Absolute ZIP path for a stamp (`{stamp}.zip`), or null when invalid.
+     */
+    public function zipPathFor(string $stamp): ?string
+    {
+        if (!self::isStamp($stamp)) {
+            return null;
+        }
+
+        return $this->backupsRoot() . DIRECTORY_SEPARATOR . $stamp . '.zip';
+    }
+
+    public function exists(string $stamp): bool
     {
         $dir = $this->pathFor($stamp);
-        if ($dir === null || !is_dir($dir)) {
-            return false;
+        $zip = $this->zipPathFor($stamp);
+
+        return ($dir !== null && is_dir($dir)) || ($zip !== null && is_file($zip));
+    }
+
+    public function delete(string $stamp): bool
+    {
+        $deletedDir = false;
+        $deletedZip = false;
+        $dir = $this->pathFor($stamp);
+        if ($dir !== null && is_dir($dir)) {
+            $deletedDir = $this->removeTree($dir);
         }
-        return $this->removeTree($dir);
+        $zip = $this->zipPathFor($stamp);
+        if ($zip !== null && is_file($zip)) {
+            $deletedZip = @unlink($zip);
+        }
+
+        return $deletedDir || $deletedZip;
+    }
+
+    /**
+     * Resolve a stamp to a directory with database.sql (legacy dir or extracted ZIP).
+     * When `$extractDir` is set, the caller must delete it afterwards.
+     */
+    private function materialize(string $stamp, ?string &$extractDir): string
+    {
+        $zip = $this->zipPathFor($stamp);
+        if ($zip !== null && is_file($zip)) {
+            $extractDir = $this->extractZip($zip, $stamp);
+
+            return $this->normalizeBackupRoot($extractDir, $stamp);
+        }
+
+        $dir = $this->pathFor($stamp);
+        if ($dir !== null && is_dir($dir)) {
+            return $this->normalizeBackupRoot($dir, $stamp);
+        }
+
+        throw new RuntimeException('Backup missing: ' . $stamp);
+    }
+
+    /**
+     * Accept both flat ZIPs (`database.sql`) and older download ZIPs (`{stamp}/database.sql`).
+     */
+    private function normalizeBackupRoot(string $dir, string $stamp): string
+    {
+        if (is_file($dir . DIRECTORY_SEPARATOR . 'database.sql')) {
+            return $dir;
+        }
+        $nested = $dir . DIRECTORY_SEPARATOR . $stamp;
+        if (is_file($nested . DIRECTORY_SEPARATOR . 'database.sql')) {
+            return $nested;
+        }
+
+        return $dir;
+    }
+
+    private function packDirectoryToZip(string $dir, string $zipPath): void
+    {
+        if (!class_exists(\ZipArchive::class)) {
+            throw new RuntimeException('ext-zip fehlt für Backup-Archive.');
+        }
+        $zip = new \ZipArchive();
+        if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            throw new RuntimeException('ZIP konnte nicht erstellt werden.');
+        }
+
+        $prefix = strlen($dir) + 1;
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST,
+        );
+        /** @var \SplFileInfo $file */
+        foreach ($iterator as $file) {
+            $relative = str_replace('\\', '/', substr($file->getPathname(), $prefix));
+            if ($relative === '' || $file->getFilename() === '.env' || str_starts_with($file->getFilename(), '.env.')) {
+                continue;
+            }
+            if ($file->isDir()) {
+                $zip->addEmptyDir($relative);
+            } elseif ($file->isFile()) {
+                $zip->addFile($file->getPathname(), $relative);
+            }
+        }
+
+        if (!$zip->close()) {
+            throw new RuntimeException('ZIP konnte nicht geschrieben werden.');
+        }
+    }
+
+    private function extractZip(string $zipPath, string $stamp): string
+    {
+        if (!class_exists(\ZipArchive::class)) {
+            throw new RuntimeException('ext-zip fehlt für Restore aus ZIP.');
+        }
+        $target = $this->rootPath . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'tmp'
+            . DIRECTORY_SEPARATOR . 'backup-restore-' . $stamp . '-' . bin2hex(random_bytes(4));
+        if (!@mkdir($target, 0775, true) && !is_dir($target)) {
+            throw new RuntimeException('Restore-Tempverzeichnis fehlt.');
+        }
+        $zip = new \ZipArchive();
+        if ($zip->open($zipPath) !== true) {
+            $this->removeTree($target);
+            throw new RuntimeException('Backup-ZIP konnte nicht geöffnet werden: ' . $stamp);
+        }
+        if (!$zip->extractTo($target)) {
+            $zip->close();
+            $this->removeTree($target);
+            throw new RuntimeException('Backup-ZIP konnte nicht entpackt werden: ' . $stamp);
+        }
+        $zip->close();
+
+        return $target;
     }
 
     /**
@@ -314,14 +463,20 @@ final class LogicalBackup
 
     /**
      * @param list<string> $args
+     * @return array{code: int, output: string}
      */
-    private function runCommand(array $args): int
+    private function runCommand(array $args): array
     {
         $cmd = implode(' ', array_map(static fn (string $a): string => escapeshellarg($a), $args));
         $output = [];
         exec($cmd . ' 2>&1', $output, $code);
+        $text = trim(implode("\n", $output));
+        // Keep flash/redirect URLs readable; full log still has the first lines.
+        if (strlen($text) > 400) {
+            $text = substr($text, 0, 397) . '...';
+        }
 
-        return $code;
+        return ['code' => $code, 'output' => $text];
     }
 
     /**

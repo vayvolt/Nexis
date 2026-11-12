@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Nexis\Kernel;
 
 /**
- * Product identity and core SemVer. Keep in sync with plugin compatibleCore (^0.4).
+ * Product identity and core SemVer. Keep in sync with plugin compatibleCore (^0.5).
  */
 final class Nexis
 {
     public const NAME = 'Nexis';
 
-    public const VERSION = '0.4.1';
+    public const VERSION = '0.5.0';
 
     public const TAGLINE = 'Individualisierbarer Homepage-Builder';
 

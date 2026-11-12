@@ -55,7 +55,7 @@ PHP 8.4 **Lazy Objects** werden für Plugin-Dienste genutzt: teure Services ents
 
 ## 2.4 Document Root und Request-Typen
 
-Der Document Root ist der **Projektroot** (`/`), nicht ein Unterordner `public/`. Das entspricht dem typischen XAMPP-Layout (`htdocs/nexis/`). Alle HTTP-Requests laufen über den Front Controller `index.php` im Root, sofern die Datei nicht als statisches Asset unter `assets/` existiert.
+Der Document Root ist der **Projektroot** (`/`), nicht ein Unterordner `public/`. Typisches Layout: Installationsordner = vHost-Root (z. B. `/var/www/html/nexis` oder `…/htdocs/nexis`). Alle HTTP-Requests laufen über den Front Controller `index.php` im Root, sofern die Datei nicht als statisches Asset unter `assets/` existiert.
 
 | Typ | Einstieg | Cache |
 |---|---|---|
@@ -64,7 +64,7 @@ Der Document Root ist der **Projektroot** (`/`), nicht ein Unterordner `public/`
 | JSON-API | Prefix `/api/v1` (**geplant ab 0.2**) | selektiv, nie für Schreibzugriffe |
 | Publizierte Assets | `/assets/…` (Dateien direkt) | lang, gehasht |
 
-`.htaccess` (Apache/XAMPP) bzw. die Server-Config muss `src/`, `config/`, `vendor/`, `storage/`, `database/`, `tests/`, `docs/`, `plugins/`-PHP, Theme-Quellen und Dotfiles vom HTTP-Zugriff ausschließen. Details: [06 Sicherheit und Betrieb](06-sicherheit-und-betrieb.md#611-document-root-im-projektordner).
+`.htaccess` (Apache) bzw. die Server-Config muss `src/`, `config/`, `vendor/`, `storage/`, `database/`, `tests/`, `docs/`, `plugins/`-PHP, Theme-Quellen und Dotfiles vom HTTP-Zugriff ausschließen. Details: [06 Sicherheit und Betrieb](06-sicherheit-und-betrieb.md#611-document-root-im-projektordner).
 
 Jede öffentliche Seite wird aus dem **veröffentlichten Snapshot** gerendert, nicht live aus dem Editor-Dokument. Dadurch bleiben Preview und Live getrennt.
 

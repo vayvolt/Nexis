@@ -12,7 +12,7 @@ final class NexisVersionTest extends TestCase
     public function testProductIdentityIsDefined(): void
     {
         self::assertSame('Nexis', Nexis::NAME);
-        self::assertSame('0.4.1', Nexis::VERSION);
+        self::assertSame('0.5.0', Nexis::VERSION);
         self::assertMatchesRegularExpression('/^\d+\.\d+\.\d+$/', Nexis::VERSION);
         self::assertNotSame('', Nexis::TAGLINE);
         self::assertSame('Vayvolt', Nexis::VENDOR);

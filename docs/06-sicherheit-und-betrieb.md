@@ -72,8 +72,8 @@ Maximale Größe und Pixelmaß sind über `MEDIA_MAX_BYTES` und `MEDIA_MAX_PIXEL
 
 ### PHP / Webserver
 
-- Document Root = Projektroot (XAMPP: `htdocs/nexis/`)
-- PHP 8.4+ FPM bzw. XAMPP-Apache mit `mod_rewrite` und `intl`
+- Document Root = Projektroot (z. B. `/var/www/html/nexis` oder `…/htdocs/nexis`)
+- PHP 8.4+ (FPM oder Apache-Modul) mit `mod_rewrite` und `intl`
 - `expose_php=Off`
 - Session-Dateien außerhalb des Document Root (z. B. `storage/sessions/` plus Deny, besser außerhalb des Projekts)
 - HTTPS verpflichtend hinter dem Reverse Proxy (`X-Forwarded-Proto` nur von `TRUSTED_PROXIES`)
@@ -91,7 +91,7 @@ Maximale Größe und Pixelmaß sind über `MEDIA_MAX_BYTES` und `MEDIA_MAX_PIXEL
 
 - Full-Page-Cache wird bei `PagePublished`, Theme-Wechsel und Token-Änderung invalidiert.
 - Plugins können den Full-Page-Cache pro Request überspringen (`PluginKernel::registerPageCacheBypass`, z. B. Warenkorb).
-- Queue-Worker laufen per Cron oder systemd-Timer (`php bin/queue-work.php`: Webhooks, Mail, geplante Publishes). Siehe [ops/queue.md](ops/queue.md).
+- Hintergrundjobs laufen per Cron oder systemd-Timer (`php bin/cron.php`: Queue, Publish, Retention, Backup-Planer). Siehe [ops/cron.md](ops/cron.md).
 - Fehlgeschlagene Jobs nach 5 Versuchen in `failed_jobs` (Worker loggt `error`); Cron sollte Exit≠0 überwachen.
 
 ## 6.8 Backup- und Restore-Einheiten
@@ -103,9 +103,9 @@ Ein vollständiges Backup umfasst:
 3. `plugins/` und `themes/` (falls nicht aus Git/Artefakt)
 4. `.env` getrennt und verschlüsselt
 
-Punkt 1 und 2 deckt der Backup-Screen `/admin/backups` ab (Recht `settings.manage`): manuelles Backup, Download als ZIP oder Dump, Löschen und ein Planer mit Intervall und Aufbewahrung. Ausgeführt wird der Planer vom Queue-Worker bzw. `php bin/backup.php --scheduled`; Details in [ops/restore.md](ops/restore.md).
+Punkt 1 und 2 deckt der Backup-Screen `/admin/backups` ab (Recht `settings.manage`): manuelles Backup als `YYYYMMDD-HHMMSS.zip`, Restore mit Bestätigung (optional Medien), Download des ZIP oder nur Dump, Löschen und ein Planer mit Intervall und Aufbewahrung. Ausgeführt wird der Planer von `php bin/cron.php`; Details in [ops/restore.md](ops/restore.md) / [ops/cron.md](ops/cron.md).
 
-Restore ist Site-übergreifend und läuft über `php bin/restore.php` — bewusst nur auf der Konsole. Site-Export/Import (ZIP unter `/admin/export`) deckt Seiten, Medien, Menüs, Redirects, Theme-Overrides und Settings ab.
+Restore ist Site-übergreifend und läuft in der Admin-UI oder über `php bin/restore.php`. Site-Export/Import (ZIP unter `/admin/export`) deckt Seiten, Medien, Menüs, Redirects, Theme-Overrides und Settings ab.
 
 ## 6.9 Audit
 
@@ -116,9 +116,9 @@ Geschrieben werden u. a.:
 - Plugin install/enable/disable/uninstall
 - Rechteänderungen
 - Settings-Änderungen an Secrets (Wert nicht im Klartext loggen)
-- Backups: `backup.create`, `backup.download`, `backup.delete`, `backup.schedule.update`
+- Backups: `backup.create`, `backup.download`, `backup.delete`, `backup.restore`, `backup.schedule.update`
 
-Retention: Default 180 Tage (Purge über `php bin/queue-work.php`; konfigurierbar per `AUDIT_RETENTION_DAYS`, Minimum 30) — siehe [ops/retention.md](ops/retention.md).
+Retention: Default 180 Tage (Purge über `php bin/cron.php`; konfigurierbar per `AUDIT_RETENTION_DAYS`, Minimum 30) — siehe [ops/retention.md](ops/retention.md).
 
 ## 6.10 DSGVO-relevante Punkte
 
@@ -144,7 +144,7 @@ HTTP 403 bzw. nicht auffindbar:
 - `storage/` inklusive Medien, Logs, Cache
 - `.env`, `composer.json`, `composer.lock`, `.git/`
 
-Apache/XAMPP (Root-`.htaccess`, Kernregeln – Reihenfolge bindend):
+Apache (Root-`.htaccess`, Kernregeln – Reihenfolge bindend):
 
 ```apache
 RewriteEngine On

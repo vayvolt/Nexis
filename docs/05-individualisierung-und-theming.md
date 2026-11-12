@@ -42,7 +42,7 @@ First-Party-Themes im Repo (Auszug):
 | `nexis/nexis` | Neutral Zinc, DM Sans (Install-Default) |
 | `nexis/atelier` | Warm, serifenbetont |
 | `nexis/editorial` | Redaktionell, klar |
-| `nexis/nord` | Weiß/Grau/Blau, Space Grotesk (nur Repo, nicht im Release-ZIP) |
+| `nexis/nord` | Weiß/Grau/Blau, Space Grotesk (nur Repo — weder CMS-ZIP noch Marketplace; Allowlist: `bin/pack-release-manifest.php`) |
 
 Layout-Token u. a. `layout.footer.position` (`split` / `center` / `stack` / `reverse`) sowie `layout.footer.showSiteName` / `layout.footer.showThemeName` sind im Theme-Admin pflegbar.
 

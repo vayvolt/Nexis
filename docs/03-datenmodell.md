@@ -45,7 +45,7 @@ Eine Page ist ein navigierbarer Inhalt. Felder im Kern:
 - `type` (`page`, `post`, `landing`, `system`, plugin-erweiterbar; Blog nutzt `post`)
 - `slug`, `path` (materialisierter Pfad **ohne** Locale-Prefix)
 - `status` (`draft`, `scheduled`, `published`, `in_review`, `archived`)
-- `scheduled_at`, `scheduled_by` (bei Status `scheduled`; Veröffentlichung über `php bin/queue-work.php`)
+- `scheduled_at`, `scheduled_by` (bei Status `scheduled`; Veröffentlichung über `php bin/cron.php`)
 - `unpublish_at`, `unpublish_by` (optionale geplante Offline-Schaltung veröffentlichter Seiten über denselben Worker)
 - `locale`
 - `published_revision_id`

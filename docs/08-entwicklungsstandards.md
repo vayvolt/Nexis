@@ -96,8 +96,8 @@ Verträge (Manifest, Events, Tabellenkern) werden in `docs/` geändert **im selb
 
 ## 8.9 Referenzumgebung
 
-- PHP 8.4 FPM bzw. XAMPP-Apache, Extension `intl` aktiv
+- PHP 8.4 (FPM oder Apache-Modul), Extension `intl` aktiv
 - MariaDB 11.4 LTS oder 10.11 LTS
-- XAMPP ist die lokale Referenz: Document Root = Projektordner (`htdocs/nexis/`), Front Controller `index.php`, Schutz über `.htaccess`
+- Lokale Referenz: Document Root = Projektordner, Front Controller `index.php`, Schutz über `.htaccess` (Apache) bzw. äquivalente Server-Config
 - Production: Apache oder nginx mit derselben Root-Politik, PHP 8.4 FPM, eigener MariaDB-User
 - `memory_limit` mind. 256M für Admin/Builder

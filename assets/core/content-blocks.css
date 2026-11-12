@@ -79,6 +79,9 @@
 
 .bk-table {
   margin: 0 0 1.75rem;
+}
+
+.bk-table__scroll {
   overflow-x: auto;
 }
 
@@ -104,12 +107,16 @@
 
 .bk-table thead th {
   background: var(--color-surface-muted, #f5f5f4);
+  color: var(--color-text, #1c1917);
   font-weight: 650;
 }
 
+.bk-table__caption,
 .bk-table caption {
-  caption-side: bottom;
-  margin-top: 0.5rem;
+  display: block;
+  width: 100%;
+  margin: 0.65rem 0 0;
+  padding: 0;
   font-size: 0.9rem;
   color: var(--color-text-muted, #78716c);
   text-align: left;

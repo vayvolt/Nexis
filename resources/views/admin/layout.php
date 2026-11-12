@@ -197,6 +197,22 @@
         .btn-danger { background: #9f1239; }
         .btn-muted { background: #78716c; }
         .btn-muted:hover { background: #57534e; }
+        button:disabled, .btn:disabled, [aria-disabled="true"] {
+            opacity: .65; cursor: wait; pointer-events: none;
+        }
+        form.is-busy { cursor: wait; }
+        form.is-busy button[type="submit"]::after {
+            content: ""; display: inline-block; width: .7em; height: .7em; margin-left: .4em;
+            border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+            vertical-align: -0.1em; animation: nx-spin .7s linear infinite;
+        }
+        @keyframes nx-spin { to { transform: rotate(360deg); } }
+        .empty-state {
+            padding: 1.25rem 1rem; text-align: center; color: var(--muted, #78716c);
+            border: 1px dashed var(--line); border-radius: 8px; background: #fafaf9;
+        }
+        .empty-state p { margin: 0; }
+        .empty-state .empty-state__hint { margin-top: .35rem; font-size: .9rem; }
         table form { margin: 0; }
         table .btn, table button { margin: .1rem .15rem .1rem 0; }
         .row-actions {
@@ -481,5 +497,6 @@ $t = $t ?? static fn (string $key, array $replace = [], ?string $default = null)
 <script src="<?php echo $e($basePath ?? '') ?>/assets/admin/locale-tabs.js" defer></script>
 <script src="<?php echo $e($basePath ?? '') ?>/assets/admin/admin-nav.js" defer></script>
 <script src="<?php echo $e($basePath ?? '') ?>/assets/admin/confirm.js" defer></script>
+<script src="<?php echo $e($basePath ?? '') ?>/assets/admin/busy.js" defer></script>
 </body>
 </html>

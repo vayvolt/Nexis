@@ -54,16 +54,19 @@ final class Config
                 'audit_days' => self::intEnv('AUDIT_RETENTION_DAYS', 180, 30),
                 'forms_days' => self::intEnv('FORMS_RETENTION_DAYS', 365, 30),
             ],
+            'api' => [
+                'cors_origins' => self::env('API_CORS_ORIGINS', ''),
+            ],
         ], $rootPath);
     }
 
-    /** Audit-log purge window used by `bin/queue-work.php` (days, min 30). */
+    /** Audit-log purge window used by `bin/cron.php` (days, min 30). */
     public function auditRetentionDays(): int
     {
         return (int) $this->get('retention.audit_days', 180);
     }
 
-    /** Form-submission purge window used by `bin/queue-work.php` (days, min 30). */
+    /** Form-submission purge window used by `bin/cron.php` (days, min 30). */
     public function formsRetentionDays(): int
     {
         return (int) $this->get('retention.forms_days', 365);
@@ -125,6 +128,27 @@ final class Config
         }
 
         return rtrim($path, '/');
+    }
+
+    /**
+     * Allowed browser Origins for `/api/v1/*` (CORS). Empty = CORS off.
+     * Comma-separated in `API_CORS_ORIGINS`; `*` allows any Origin without credentials.
+     *
+     * @return list<string>
+     */
+    public function apiCorsOrigins(): array
+    {
+        $raw = trim((string) $this->get('api.cors_origins', ''));
+        if ($raw === '') {
+            return [];
+        }
+
+        $parts = preg_split('/\s*,\s*/', $raw) ?: [];
+
+        return array_values(array_filter(
+            array_map(static fn (string $p): string => trim($p), $parts),
+            static fn (string $p): bool => $p !== '',
+        ));
     }
 
     private static function env(string $key, string $default): string

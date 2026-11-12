@@ -27,12 +27,17 @@ use Throwable;
 
 /**
  * Backups unter `/admin/backups` (Recht settings.manage): Liste, „Jetzt sichern“,
- * Download als ZIP oder nur Dump, Löschen und der Planer (`backup.schedule.*`).
+ * Restore, Download als ZIP oder nur Dump, Löschen und der Planer (`backup.schedule.*`).
  */
 final class BackupAdminController
 {
     /** Guards against double submits and accidental dump storms. */
     private const MIN_CREATE_INTERVAL = 60;
+
+    /** Guards against accidental restore storms (double submit). */
+    private const MIN_RESTORE_INTERVAL = 60;
+
+    private const RESTORE_LOCK = 'backup-restore.lock';
 
     public function __construct(
         private ViewRenderer $views,
@@ -67,6 +72,10 @@ final class BackupAdminController
         if (RequestInput::query($request, 'deleted') === '1') {
             $notice = $this->ui->get($user, 'admin.backups.deleted');
         }
+        $restored = RequestInput::query($request, 'restored');
+        if ($restored !== '') {
+            $notice = $this->ui->get($user, 'admin.backups.restored', ['stamp' => $restored]);
+        }
         if (RequestInput::query($request, 'saved') === '1') {
             $notice = $this->ui->get($user, 'admin.common.saved');
         }
@@ -88,6 +97,7 @@ final class BackupAdminController
             'retainMax' => BackupSchedule::RETAIN_MAX,
             'backupsPath' => $this->backup->backupsRoot(),
             'mysqldumpMissing' => $this->backup->resolveMysqldump() === null,
+            'mysqlMissing' => $this->backup->resolveMysql() === null,
             'notice' => $notice,
             'error' => $error,
         ], 'admin.layout'));
@@ -169,9 +179,18 @@ final class BackupAdminController
             return $this->responses->redirect($basePath . '/admin/backups?error=missing');
         }
 
+        @set_time_limit(600);
+        try {
+            $sqlPath = $this->archiver->sqlFile($stamp);
+        } catch (Throwable $e) {
+            return $this->responses->redirect(
+                $basePath . '/admin/backups?error=download_failed&message=' . rawurlencode($e->getMessage()),
+            );
+        }
+
         $this->audit->log('backup.download', $site->id, $user->id, 'backup', $stamp, ['format' => 'sql']);
 
-        return $this->responses->fileStream($entry->path . DIRECTORY_SEPARATOR . 'database.sql', 'application/sql')
+        return $this->responses->fileStream($sqlPath, 'application/sql')
             ->withHeader('Content-Disposition', 'attachment; filename="nexis-backup-' . $stamp . '.sql"');
     }
 
@@ -194,6 +213,51 @@ final class BackupAdminController
         $this->audit->log('backup.delete', $site->id, $user->id, 'backup', $stamp);
 
         return $this->responses->redirect($basePath . '/admin/backups?deleted=1');
+    }
+
+    public function restore(ServerRequestInterface $request): ResponseInterface
+    {
+        $ctx = $this->context($request);
+        if ($ctx instanceof ResponseInterface) {
+            return $ctx;
+        }
+        [$user, $site, $basePath] = $ctx;
+
+        $stamp = RequestInput::string($request, 'stamp');
+        $entry = $this->catalog->find($stamp);
+        if ($entry === null || !$entry->restorable()) {
+            return $this->responses->redirect($basePath . '/admin/backups?error=missing');
+        }
+        if (RequestInput::string($request, 'confirm') !== '1') {
+            return $this->responses->redirect($basePath . '/admin/backups?error=restore_confirm');
+        }
+        if ($this->backup->resolveMysql() === null) {
+            return $this->responses->redirect($basePath . '/admin/backups?error=mysql_missing');
+        }
+        if (!$this->acquireRestoreLock()) {
+            return $this->responses->redirect($basePath . '/admin/backups?error=restore_busy');
+        }
+
+        @set_time_limit(600);
+        @ini_set('max_execution_time', '600');
+
+        $includeMedia = RequestInput::string($request, 'include_media') === '1';
+        try {
+            $this->backup->restore($this->databaseConfig(), $stamp, $includeMedia);
+        } catch (Throwable $e) {
+            $this->releaseRestoreLock();
+
+            return $this->responses->redirect(
+                $basePath . '/admin/backups?error=restore_failed&message=' . rawurlencode($e->getMessage()),
+            );
+        }
+        $this->releaseRestoreLock();
+
+        $this->audit->log('backup.restore', $site->id, $user->id, 'backup', $stamp, [
+            'include_media' => $includeMedia,
+        ]);
+
+        return $this->responses->redirect($basePath . '/admin/backups?restored=' . rawurlencode($stamp));
     }
 
     public function saveSchedule(ServerRequestInterface $request): ResponseInterface
@@ -230,8 +294,42 @@ final class BackupAdminController
             'missing' => $this->ui->get($user, 'admin.backups.error_missing'),
             'delete_failed' => $this->ui->get($user, 'admin.backups.error_delete'),
             'download_failed' => $this->ui->get($user, 'admin.backups.error_download', ['message' => $detail]),
+            'restore_failed' => $this->ui->get($user, 'admin.backups.error_restore', ['message' => $detail]),
+            'restore_confirm' => $this->ui->get($user, 'admin.backups.error_restore_confirm'),
+            'restore_busy' => $this->ui->get($user, 'admin.backups.error_restore_busy'),
+            'mysql_missing' => $this->ui->get($user, 'admin.backups.mysql_missing'),
             default => $this->ui->get($user, 'admin.backups.error_create', ['message' => $detail]),
         };
+    }
+
+    /**
+     * File lock under storage/cache so two parallel restores cannot wipe media mid-run.
+     */
+    private function acquireRestoreLock(): bool
+    {
+        $dir = $this->config->rootPath . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'cache';
+        if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
+            return false;
+        }
+        $lockFile = $dir . DIRECTORY_SEPARATOR . self::RESTORE_LOCK;
+        if (is_file($lockFile)) {
+            $mtime = filemtime($lockFile);
+            if ($mtime !== false && (time() - $mtime) < self::MIN_RESTORE_INTERVAL) {
+                return false;
+            }
+            @unlink($lockFile);
+        }
+
+        return @file_put_contents($lockFile, (string) time()) !== false;
+    }
+
+    private function releaseRestoreLock(): void
+    {
+        $lockFile = $this->config->rootPath . DIRECTORY_SEPARATOR . 'storage'
+            . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . self::RESTORE_LOCK;
+        if (is_file($lockFile)) {
+            @unlink($lockFile);
+        }
     }
 
     /**

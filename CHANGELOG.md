@@ -4,6 +4,27 @@ Alle wesentlichen Änderungen an Nexis. Format angelehnt an [Keep a Changelog](h
 
 ## [Unreleased]
 
+## [0.5.0] – 2026-11-12
+
+### Added
+
+- Backup-**Restore in der Admin-UI** (`/admin/backups`): Bestätigungsdialog, optional Medien ersetzen, Audit `backup.restore`; CLI bleibt (`php bin/restore.php`)
+- Backups werden **direkt als ZIP** unter `storage/backups/YYYYMMDD-HHMMSS.zip` abgelegt (Download streamt die Datei; Legacy-Ordner bleiben lesbar)
+- Einheitlicher Cron-Einstieg `php bin/cron.php` / `composer cron` (Queue, Publish, Retention, Backup-Planer); Vorlage `docs/ops/crontab.example` (ersetzt `queue-work.php`)
+- API-**CORS** über `API_CORS_ORIGINS` (kommaseparierte Origins oder `*`); Preflight `OPTIONS` auf `/api/v1/*`
+- Admin Loading-States (`data-busy`) für Backup erstellen/Restore, Publish und CMS-Upgrade; Empty-State für leere Backup-Liste
+- Abschnitts-Block: optionales Prop `anchor` setzt eine HTML-`id` (für One-Pager-Sprungmarken); Builder-Label DE/EN
+
+### Changed
+
+- First-Party Plugins/Themes: `compatibleCore` auf `^0.5`
+
+### Fixed
+
+- Backup: `mysqldump` ohne `--routines` (Exit 2 nach MariaDB-Upgrade bei inkonsistentem `mysql.proc`); stderr erscheint in der Fehlermeldung
+- Tabellen-Block: Caption außerhalb des horizontalen Scroll-Wrappers (korrekt linksbündig)
+- Core `content-blocks.css`: Tabellenkopf mit lesbarer Textfarbe; Caption-/Scroll-Struktur an neuen Markup-Stand angepasst
+
 ## [0.4.1] – 2026-11-06
 
 ### Added

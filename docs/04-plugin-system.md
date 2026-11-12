@@ -70,7 +70,7 @@ Provider dürfen den Kernel nicht ersetzen und keine anderen Provider instantiie
 | `AdminSlot` | UI-Einschübe | Sidebar-Link, Dashboard-Kachel |
 | `registerAdminNavSection` | Aktiver Admin-Menüpunkt (Pfad / Page-Typ) | Blog markiert `/admin/blog` und `post` |
 | `registerMailJobHandler` | Mail-Job-Typen in Queue `mail` | Shop-Bestellmail |
-| `registerJobHandler` | Eigene Queue + Worker (`bin/queue-work.php`) | Bestell-Export, Payment-Capture |
+| `registerJobHandler` | Eigene Queue + Worker (`bin/cron.php`) | Bestell-Export, Payment-Capture |
 | `registerPageCacheBypass` | Full-Page-Cache überspringen | Warenkorb-Session / Checkout-Pfad |
 | `registerWebhookEvent` + `WebhookDispatcher::dispatch` | Custom Webhook-Events | `shop.order.placed` |
 | `registerSitemapPath(s)` | Extra Sitemap-URLs | `/blog`, `/shop` |

@@ -138,6 +138,7 @@ use Nexis\Http\Middleware\ErrorHandlerMiddleware;
 use Nexis\Http\Middleware\PluginPreRouteMiddleware;
 use Nexis\Http\Middleware\RequestIdMiddleware;
 use Nexis\Http\Middleware\ApiTokenAuthMiddleware;
+use Nexis\Http\Middleware\CorsMiddleware;
 use Nexis\Http\Middleware\RequireAuthMiddleware;
 use Nexis\Http\Middleware\ResolveSiteMiddleware;
 use Nexis\Http\Middleware\SessionMiddleware;
@@ -684,6 +685,7 @@ return [
             new Route('POST', '/admin/backups/download', [$backups, 'download']),
             new Route('POST', '/admin/backups/download-sql', [$backups, 'downloadSql']),
             new Route('POST', '/admin/backups/delete', [$backups, 'delete']),
+            new Route('POST', '/admin/backups/restore', [$backups, 'restore']),
             new Route('POST', '/admin/backups/schedule', [$backups, 'saveSchedule']),
             new Route('GET', '/admin/export', [$export, 'index']),
             new Route('POST', '/admin/export/download', [$export, 'download']),
@@ -730,6 +732,7 @@ return [
                 $container->get(ErrorHandlerMiddleware::class),
                 $container->get(RequestIdMiddleware::class),
                 $container->get(StripBasePathMiddleware::class),
+                $container->get(CorsMiddleware::class),
                 $container->get(SecurityHeadersMiddleware::class),
                 $container->get(RateLimitMiddleware::class),
                 $container->get(SessionMiddleware::class),

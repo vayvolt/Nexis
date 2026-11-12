@@ -212,7 +212,8 @@ $blockCatalog = array_map(static function (array $item) use ($t): array {
         </form>
     <?php endif; ?>
     <?php if ($canPublish): ?>
-        <form method="post" action="<?php echo $e($basePath) ?>/admin/pages/<?php echo $e($page->id->value) ?>/publish" id="nx-publish-form" hidden>
+        <form method="post" action="<?php echo $e($basePath) ?>/admin/pages/<?php echo $e($page->id->value) ?>/publish" id="nx-publish-form" hidden
+              data-busy data-busy-label="<?php echo $e($t('admin.common.working')) ?>">
             <input type="hidden" name="_csrf" value="<?php echo $e($csrf) ?>">
         </form>
         <form method="post" action="<?php echo $e($basePath) ?>/admin/pages/<?php echo $e($page->id->value) ?>/reject-review" id="nx-reject-review-form" hidden>
@@ -421,6 +422,7 @@ $blockCatalog = array_map(static function (array $item) use ($t): array {
             'style' => $t('admin.builder.prop.style'),
             'width' => $t('admin.builder.prop.width'),
             'padding' => $t('admin.builder.prop.padding'),
+            'anchor' => $t('admin.builder.prop.anchor'),
             'assetId' => $t('admin.builder.prop.assetId'),
             'assetIds' => $t('admin.builder.prop.assetIds'),
             'alt' => $t('admin.builder.prop.alt'),

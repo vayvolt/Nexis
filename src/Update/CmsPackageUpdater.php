@@ -38,7 +38,7 @@ final class CmsPackageUpdater
     ];
 
     /** @var list<string> */
-    private const REPLACE_BIN = ['migrate.php', 'queue-work.php', '.htaccess'];
+    private const REPLACE_BIN = ['migrate.php', 'cron.php', '.htaccess'];
 
     /** @var list<string> */
     private const FIRST_PARTY_PLUGINS = ['blog', 'catalog', 'consent', 'forms', 'redirects'];

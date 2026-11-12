@@ -233,7 +233,7 @@ final class PluginKernel
     }
 
     /**
-     * Register a background worker for a dedicated job queue (processed by bin/queue-work.php).
+     * Register a background worker for a dedicated job queue (processed by bin/cron.php).
      */
     public function registerJobHandler(string $queue, JobHandler $handler): void
     {

@@ -5,7 +5,7 @@
 
 ## Kontext
 
-Die Installation läuft lokal unter XAMPP (`htdocs/nexis/`). Ein separates `public/` als einziges Document Root würde VirtualHost-Änderungen oder Symlinks erzwingen und vom üblichen XAMPP-Verhalten abweichen.
+Die Installation soll ohne separates `public/`-Document-Root auskommen (Projektordner = vHost-Root). Ein zusätzliches `public/` würde VirtualHost-Änderungen oder Symlinks erzwingen und Shared-Hosting-/lokale Standardlayouts erschweren.
 
 ## Entscheidung
 

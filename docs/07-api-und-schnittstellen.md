@@ -1,6 +1,6 @@
 # 07 API und Schnittstellen
 
-> **Status:** REST-API und API-Tokens sind vollständig: Lesen (Public + Admin), Token-Verwaltung unter `/admin/api-tokens` und **Schreiben** (Website, Seiten, Übersetzungen, Builder-Dokument mit `If-Match`, Publish/Unpublish/Revert, Medien-Upload, Plugin-Status, Theme-Tokens, Block-Registry). Offen ist nur CORS für Browser-Clients (optional). Nicht implementierte Zeilen sind unten mit „geplant" markiert.
+> **Status:** REST-API und API-Tokens sind vollständig: Lesen (Public + Admin), Token-Verwaltung unter `/admin/api-tokens` und **Schreiben** (Website, Seiten, Übersetzungen, Builder-Dokument mit `If-Match`, Publish/Unpublish/Revert, Medien-Upload, Plugin-Status, Theme-Tokens, Block-Registry). CORS für Browser-Clients ist über `API_CORS_ORIGINS` konfigurierbar (leer = aus).
 
 ### Im MVP enthalten
 
@@ -29,7 +29,7 @@
 | `GET /api/v1/admin/plugins`, `POST /api/v1/admin/plugins/{vendor}/{name}/enable` bzw. `/disable` | implementiert |
 | `GET` + `PATCH /api/v1/admin/theme/tokens` | implementiert |
 | `GET /api/v1/admin/blocks` | implementiert |
-| CORS für Browser-Clients | geplant (optional) |
+| CORS für Browser-Clients | implementiert (`API_CORS_ORIGINS`) |
 
 ## 7.1 Prinzipien
 
@@ -132,6 +132,21 @@ curl -X PUT https://example.com/api/v1/admin/pages/$ID/document \
 curl -H "Authorization: Bearer nx_…" https://example.com/api/v1/admin/pages?locale=de
 ```
 
+### CORS
+
+Browser-Clients setzen in `.env` eine kommaseparierte Allowlist:
+
+```env
+API_CORS_ORIGINS=https://app.example.com,https://admin.example.com
+```
+
+- Leer (Default): keine CORS-Header — nur same-origin / nicht-Browser-Clients.
+- Treffer auf `Origin`: Antwort trägt `Access-Control-Allow-Origin` (Echo des Origins), Methoden `GET, POST, PUT, PATCH, DELETE, OPTIONS`, Header inkl. `Authorization`, `Content-Type`, `If-Match`, `X-CSRF-Token`, `Idempotency-Key`, `X-Request-Id`.
+- `OPTIONS` auf `/api/v1/*` antwortet mit `204` vor der Auth (Preflight).
+- `*` erlaubt jedes Origin ohne Credentials (nur Demo/Public-Szenarien).
+
+Bearer-Tokens brauchen keine Cookies; `Access-Control-Allow-Credentials` wird bewusst nicht gesetzt.
+
 ## 7.4 Public-API
 
 Basis: `/api/v1/public` (ohne Authentifizierung)
@@ -187,7 +202,7 @@ Neue fachliche Fähigkeiten bekommen zuerst ein Interface im Kern oder im Plugin
 
 ## 7.8 Idempotenz
 
-Schreibende Plugin-Endpunkte (Form-Submit, Zahlungs-Callbacks) akzeptieren `Idempotency-Key` (Header oder Formularfeld `_idempotency_key`). Helper: `Nexis\Http\Idempotency` (`keyFrom` / `check` / `remember`). Der Kern speichert Key + Hash der Anfrage und Antwortmetadaten für 24 h pro Site (`idempotency_keys`). Gleiche Key+Payload → Replay; gleicher Key mit anderer Payload → `409`. Ablaufbereinigung über `php bin/queue-work.php`.
+Schreibende Plugin-Endpunkte (Form-Submit, Zahlungs-Callbacks) akzeptieren `Idempotency-Key` (Header oder Formularfeld `_idempotency_key`). Helper: `Nexis\Http\Idempotency` (`keyFrom` / `check` / `remember`). Der Kern speichert Key + Hash der Anfrage und Antwortmetadaten für 24 h pro Site (`idempotency_keys`). Gleiche Key+Payload → Replay; gleicher Key mit anderer Payload → `409`. Ablaufbereinigung über `php bin/cron.php`.
 
 Provider-Callbacks ohne Browser-Session: `$kernel->registerCsrfExempt('/ext/vendor/plugin/webhook')` und Authentizität per `Nexis\Security\HmacSignature::verify` (Header-Format wie Outbound `X-Nexis-Signature: sha256=…`).
 

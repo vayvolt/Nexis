@@ -7,7 +7,7 @@ namespace Nexis\Infrastructure\Backup;
 use DateTimeImmutable;
 
 /**
- * One backup directory under storage/backups/{stamp}/ as shown in the admin UI.
+ * One backup under storage/backups/ — `{stamp}.zip` or legacy `{stamp}/` directory.
  */
 final readonly class BackupEntry
 {
@@ -24,6 +24,7 @@ final readonly class BackupEntry
         public bool $hasMedia,
         public int $mediaFiles,
         public ?array $manifest,
+        public bool $isArchive = false,
     ) {
     }
 

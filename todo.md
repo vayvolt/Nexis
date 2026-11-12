@@ -4,9 +4,13 @@ Stand aus [docs/internal/13-roadmap-post-0.2.md](docs/internal/13-roadmap-post-0
 
 ## Priorität (empfohlen)
 
-1. Shop (`nexis/shop`) – wenn Demand
-2. SSO / OAuth / SAML
-3. Rest nach Feedback
+Führende Planung bis **1.0** (Kern, Plugins optional): intern [`docs/internal/17-roadmap-to-1.0.md`](docs/internal/17-roadmap-to-1.0.md).
+
+1. Papierkorb / Recover (0.6) — nächster Meilenstein nach 0.5.0
+2. Seitenhierarchie-UI (0.6)
+3. SSO und/oder Passkeys (0.7)
+4. Staging↔Prod Content-Sync (0.8)
+5. Shop (`nexis/shop`) – nur bei Demand, **kein** 1.0-Gate
 
 ## REST-API – noch offen
 
@@ -15,14 +19,14 @@ Stand aus [docs/internal/13-roadmap-post-0.2.md](docs/internal/13-roadmap-post-0
 - [x] `GET /api/v1/admin/plugins` + `POST …/{vendor}/{name}/enable` bzw. `/disable`
 - [x] `GET` + `PATCH /api/v1/admin/theme/tokens`
 - [x] `GET /api/v1/admin/blocks`
-- [ ] CORS für Browser-Clients (optional)
+- [x] CORS für Browser-Clients (`API_CORS_ORIGINS`)
 
 ## Backups – noch offen
 
-- [ ] Restore aus der Admin-UI (heute CLI: `php bin/restore.php`)
+- [x] Restore aus der Admin-UI (CLI bleibt: `php bin/restore.php`)
 - [ ] Inkrementelle Backups
 - [ ] Off-Site-Ziele (S3 / FTP)
-- [ ] Auswahl einzelner Bestandteile beim Restore
+- [x] Auswahl Medien beim Restore (DB immer; Medien optional)
 
 ## Inhalte & Editor
 

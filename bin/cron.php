@@ -3,13 +3,19 @@
 declare(strict_types=1);
 
 /**
- * Process queued webhook deliveries, mail jobs, plugin JobHandlers, due scheduled publishes,
- * purge expired audit log rows (default 180 days, AUDIT_RETENTION_DAYS),
- * purge expired idempotency keys,
- * purge old form submissions (default 365 days, FORMS_RETENTION_DAYS),
- * and run the due scheduled backup (Admin → Backups).
+ * Unified Nexis cron entry point (one crontab line).
  *
- * Usage: php bin/queue-work.php
+ * Runs per invocation:
+ * - webhook / mail / plugin queue jobs
+ * - due scheduled publish + unpublish
+ * - audit / idempotency / forms retention purge
+ * - due backup planner (Admin → Backups)
+ *
+ * Usage:
+ *   php bin/cron.php
+ *   composer cron
+ *
+ * Crontab example: docs/ops/crontab.example
  *
  * Exit codes: 0 = ok, 1 = fatal/lock/error, 75 = already running (EX_TEMPFAIL).
  */
@@ -33,10 +39,10 @@ $lockDir = $root . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'cach
 if (!is_dir($lockDir)) {
     mkdir($lockDir, 0775, true);
 }
-$lockFile = $lockDir . DIRECTORY_SEPARATOR . 'queue-work.lock';
+$lockFile = $lockDir . DIRECTORY_SEPARATOR . 'cron.lock';
 $lock = fopen($lockFile, 'c+');
 if ($lock === false || !flock($lock, LOCK_EX | LOCK_NB)) {
-    fwrite(STDERR, "queue-work already running or lock unavailable.\n");
+    fwrite(STDERR, "nexis cron already running or lock unavailable.\n");
     exit(75);
 }
 
@@ -58,7 +64,6 @@ try {
     $idemPurged = $app->container->get(IdempotencyStore::class)->purgeExpired();
     $formsPurged = $app->container->get(FormsRetentionPurge::class)->purgeOlderThanDays($formsDays);
 
-    // Once per process: create the scheduled backup when the Planer is due.
     $backup = $app->container->get(BackupScheduleRunner::class)->runIfDue();
 
     fwrite(
@@ -71,9 +76,10 @@ try {
         fwrite(STDOUT, "Scheduled backup {$backup->stamp} created, pruned " . count($backup->pruned) . " old backup(s).\n");
     } elseif ($backup->failed()) {
         fwrite(STDERR, 'Scheduled backup failed: ' . (string) $backup->error . "\n");
+        $exit = 1;
     }
 } catch (Throwable $e) {
-    fwrite(STDERR, 'queue-work failed: ' . $e->getMessage() . "\n");
+    fwrite(STDERR, 'nexis cron failed: ' . $e->getMessage() . "\n");
     $exit = 1;
 } finally {
     flock($lock, LOCK_UN);

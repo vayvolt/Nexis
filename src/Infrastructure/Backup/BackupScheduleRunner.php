@@ -13,7 +13,7 @@ use Throwable;
 
 /**
  * Runs the configured backup Planer: creates a backup when it is due and prunes
- * everything beyond the retention count. Called from bin/queue-work.php (once per
+ * everything beyond the retention count. Called from bin/cron.php (once per
  * process) and from `php bin/backup.php --scheduled`.
  */
 final class BackupScheduleRunner

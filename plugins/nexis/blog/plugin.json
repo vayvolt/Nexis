@@ -1,11 +1,11 @@
 {
   "id": "nexis/blog",
   "name": "Blog / News",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Vayvolt",
   "license": "GPL-2.0-or-later",
   "licenseUri": "https://www.gnu.org/licenses/gpl-2.0.html",
-  "compatibleCore": "^0.4",
+  "compatibleCore": "^0.5",
   "php": ">=8.4",
   "type": "plugin",
   "autoload": "Nexis\\Plugins\\Blog\\",

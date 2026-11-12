@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Logical backup: MariaDB dump + storage/media → storage/backups/{timestamp}/
+ * Logical backup: MariaDB dump + storage/media → storage/backups/{timestamp}.zip
  *
  * Usage: php bin/backup.php [--no-media] [--scheduled]
  *

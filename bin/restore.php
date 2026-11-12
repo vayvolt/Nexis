@@ -53,7 +53,7 @@ if ($latest) {
     $stamp = $available[0]['stamp'] ?? null;
 }
 if (!is_string($stamp) || $stamp === '') {
-    fwrite(STDERR, "Ungültiger Backup-Stempel. Erwartet: YYYYMMDD-HHMMSS oder --latest\n");
+    fwrite(STDERR, "Ungültiger Backup-Name. Erwartet: YYYYMMDD-HHMMSS oder --latest\n");
     exit(1);
 }
 

@@ -100,7 +100,10 @@ $canUpgrade = !empty($canUpgrade);
                 </form>
                 <?php if ($updateAvailable && $canUpgrade): ?>
                     <form method="post" action="<?php echo $e($basePath) ?>/admin/about/upgrade" class="inline-form"
-                          onsubmit="return confirm(<?php echo json_encode($t('admin.about.upgrade_confirm', ['version' => (string) ($cmsUpdate['latest'] ?? '')]), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE); ?>);">
+                          data-busy data-busy-label="<?php echo $e($t('admin.common.working')) ?>"
+                          data-confirm-title="<?php echo $e($t('admin.about.upgrade_run', ['version' => (string) ($cmsUpdate['latest'] ?? '')])) ?>"
+                          data-confirm="<?php echo $e($t('admin.about.upgrade_confirm', ['version' => (string) ($cmsUpdate['latest'] ?? '')])) ?>"
+                          data-confirm-ok="<?php echo $e($t('admin.about.upgrade_run', ['version' => (string) ($cmsUpdate['latest'] ?? '')])) ?>">
                         <input type="hidden" name="_csrf" value="<?php echo $e($csrf) ?>">
                         <button type="submit" class="btn btn-small"><?php echo $e($t('admin.about.upgrade_run', ['version' => (string) ($cmsUpdate['latest'] ?? '')])) ?></button>
                     </form>
@@ -124,7 +127,10 @@ $canUpgrade = !empty($canUpgrade);
                             <li style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center">
                                 <span><strong>v<?php echo $e((string) ($release['version'] ?? '')) ?></strong></span>
                                 <form method="post" action="<?php echo $e($basePath) ?>/admin/about/upgrade" class="inline-form"
-                                      onsubmit="return confirm(<?php echo json_encode($t('admin.about.downgrade_confirm', ['version' => (string) ($release['version'] ?? '')]), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE); ?>);">
+                                      data-busy data-busy-label="<?php echo $e($t('admin.common.working')) ?>"
+                                      data-confirm-title="<?php echo $e($t('admin.about.downgrade_run', ['version' => (string) ($release['version'] ?? '')])) ?>"
+                                      data-confirm="<?php echo $e($t('admin.about.downgrade_confirm', ['version' => (string) ($release['version'] ?? '')])) ?>"
+                                      data-confirm-ok="<?php echo $e($t('admin.about.downgrade_run', ['version' => (string) ($release['version'] ?? '')])) ?>">
                                     <input type="hidden" name="_csrf" value="<?php echo $e($csrf) ?>">
                                     <input type="hidden" name="version" value="<?php echo $e((string) ($release['version'] ?? '')) ?>">
                                     <button type="submit" class="btn btn-small"><?php echo $e($t('admin.about.downgrade_run', ['version' => (string) ($release['version'] ?? '')])) ?></button>

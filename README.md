@@ -6,7 +6,7 @@ Eine Installation verwaltet **eine Website**. Themes, Branding und Plugins erwei
 - Portal & Downloads: [nexis.vayvolt.de](https://nexis.vayvolt.de/)
 - Quellcode: [github.com/vayvolt/Nexis](https://github.com/vayvolt/Nexis)
 
-Aktuell **0.4.1**: Block-Builder, Admin-/Public-i18n (de/en), First-Party-Plugins, optionaler Plugin-/Theme-Marktplatz, Backups/Upgrade, Rollen-Matrix, Launch-Härte (Legal-Seeds, Consent, A11y, Retention, DSAR-Export). Die REST-API (`/api/v1`) liest und schreibt den Kern (Website, Seiten, Übersetzungen, Builder-Dokument mit `If-Match`, Publish/Revert, Medien-Upload, Plugin-Status, Theme-Tokens, Block-Registry) inkl. API-Tokens.
+Aktuell **0.5.0**: Block-Builder, Admin-/Public-i18n (de/en), First-Party-Plugins, optionaler Plugin-/Theme-Marktplatz, Backups inkl. Restore-UI, einheitlicher Cron, API-CORS, Rollen-Matrix, Launch-Härte (Legal-Seeds, Consent, A11y, Retention, DSAR-Export). Die REST-API (`/api/v1`) liest und schreibt den Kern (Website, Seiten, Übersetzungen, Builder-Dokument mit `If-Match`, Publish/Revert, Medien-Upload, Plugin-Status, Theme-Tokens, Block-Registry) inkl. API-Tokens.
 
 ## Voraussetzungen
 
@@ -20,7 +20,7 @@ Aktuell **0.4.1**: Block-Builder, Admin-/Public-i18n (de/en), First-Party-Plugin
 ### Web-Installer (empfohlen)
 
 1. `composer install`
-2. Document Root auf diesen Ordner zeigen (z. B. XAMPP: `http://localhost/nexis/`)
+2. Document Root auf diesen Ordner zeigen (z. B. `http://localhost/nexis/`)
 3. `/install` öffnen und Formular ausfüllen
 
 Der Installer legt `.env`, Datenbank und Admin-Konto an und kann First-Party-Plugins aktivieren. Installer und Standardinhalte sind **deutsch und englisch**; die Standard-Sprache ist wählbar.
@@ -54,7 +54,7 @@ Themes: **Nexis** (Install-Default), Atelier, Editorial, Nord.
 ### Betrieb
 
 ```bash
-php bin/queue-work.php   # Webhooks, Mail, geplante Publishes (Cron empfohlen)
+php bin/cron.php         # Queue, Publish, Retention, Backup-Planer (eine Cron-Zeile)
 composer backup          # DB-Dump + Medien → storage/backups/
 composer restore         # Backup auflisten / zurückspielen (--latest --yes)
 ```

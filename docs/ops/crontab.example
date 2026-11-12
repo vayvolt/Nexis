@@ -1,0 +1,12 @@
+# Nexis – eine Cron-Zeile für alles (Queue, Publish, Retention, Backup-Planer)
+# Pfade anpassen. Log: storage/logs/cron.log
+#
+# Installation (Linux):
+#   crontab -e
+#   # Inhalt dieser Datei einfügen, oder:
+#   crontab /var/www/html/nexis/docs/ops/crontab.example
+#
+# Windows Task Scheduler: Programm = php.exe,
+# Argumente = C:\pfad\zu\nexis\bin\cron.php, Start in = Projektroot, alle 1 Min.
+
+* * * * * cd /var/www/html/nexis && /usr/bin/php bin/cron.php >> storage/logs/cron.log 2>&1

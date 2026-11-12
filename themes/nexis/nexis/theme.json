@@ -1,8 +1,8 @@
 {
   "id": "nexis/nexis",
   "name": "Nexis",
-  "version": "1.0.0",
-  "compatibleCore": "^0.4",
+  "version": "1.0.1",
+  "compatibleCore": "^0.5",
   "slots": ["header", "footer", "after-content", "admin.preview-chrome"],
   "templates": {
     "page": "templates/page.twig",

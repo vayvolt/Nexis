@@ -19,11 +19,15 @@ $size = static fn (int $bytes): string => SystemHealthReport::formatBytes($bytes
 <?php if ($mysqldumpMissing): ?>
     <p class="flash flash--error" role="alert"><?php echo $e($t('admin.backups.mysqldump_missing')) ?></p>
 <?php endif; ?>
+<?php if (!empty($mysqlMissing)): ?>
+    <p class="flash flash--error" role="alert"><?php echo $e($t('admin.backups.mysql_missing')) ?></p>
+<?php endif; ?>
 
 <div class="card">
     <h2><?php echo $e($t('admin.backups.create_heading')) ?></h2>
     <p class="muted"><?php echo $e($t('admin.backups.create_hint')) ?></p>
-    <form method="post" action="<?php echo $e($basePath) ?>/admin/backups">
+    <form method="post" action="<?php echo $e($basePath) ?>/admin/backups" data-busy
+          data-busy-label="<?php echo $e($t('admin.common.working')) ?>">
         <input type="hidden" name="_csrf" value="<?php echo $e($csrf) ?>">
         <label class="check-label">
             <input type="checkbox" name="include_media" value="1" checked>
@@ -75,14 +79,17 @@ $size = static fn (int $bytes): string => SystemHealthReport::formatBytes($bytes
                 : $e($t('admin.common.empty_dash')) ?>
         </p>
         <p class="muted" style="margin:.35rem 0 0;font-size:.85rem"><?php echo $e($t('admin.backups.schedule_cron')) ?></p>
-        <p class="muted" style="margin:.35rem 0 0;font-size:.85rem"><code>php bin/backup.php --scheduled</code></p>
+        <p class="muted" style="margin:.35rem 0 0;font-size:.85rem"><code>php bin/cron.php</code></p>
     </form>
 </div>
 
 <div class="card">
     <h2><?php echo $e($t('admin.backups.list_heading')) ?></h2>
     <?php if ($backups === []): ?>
-        <p class="muted"><?php echo $e($t('admin.backups.empty')) ?></p>
+        <div class="empty-state" role="status">
+            <p><?php echo $e($t('admin.backups.empty')) ?></p>
+            <p class="empty-state__hint"><?php echo $e($t('admin.backups.empty_hint')) ?></p>
+        </div>
     <?php else: ?>
         <table>
             <thead>
@@ -100,6 +107,9 @@ $size = static fn (int $bytes): string => SystemHealthReport::formatBytes($bytes
                     <td><code><?php echo $e($entry->stamp) ?></code></td>
                     <td class="muted"><?php echo $e($entry->createdAt->format('Y-m-d H:i') . ' UTC') ?></td>
                     <td>
+                        <?php if ($entry->isArchive): ?>
+                            <span class="badge">ZIP</span>
+                        <?php endif; ?>
                         <?php if ($entry->restorable()): ?>
                             <span class="badge badge-admin">database.sql</span>
                         <?php else: ?>
@@ -131,6 +141,24 @@ $size = static fn (int $bytes): string => SystemHealthReport::formatBytes($bytes
                                     <input type="hidden" name="stamp" value="<?php echo $e($entry->stamp) ?>">
                                     <button type="submit" class="btn-small btn-muted"><?php echo $e($t('admin.backups.download_sql')) ?></button>
                                 </form>
+                                <form method="post" action="<?php echo $e($basePath) ?>/admin/backups/restore"
+                                      data-busy
+                                      data-busy-label="<?php echo $e($t('admin.backups.restoring')) ?>"
+                                      data-confirm-title="<?php echo $e($t('admin.backups.restore_title')) ?>"
+                                      data-confirm="<?php echo $e($t('admin.backups.restore_confirm', ['stamp' => $entry->stamp])) ?>"
+                                      data-confirm-detail="<?php echo $e($t('admin.backups.restore_detail')) ?>"
+                                      data-confirm-ok="<?php echo $e($t('admin.backups.restore')) ?>">
+                                    <input type="hidden" name="_csrf" value="<?php echo $e($csrf) ?>">
+                                    <input type="hidden" name="stamp" value="<?php echo $e($entry->stamp) ?>">
+                                    <input type="hidden" name="confirm" value="1">
+                                    <?php if ($entry->hasMedia): ?>
+                                        <label class="check-label" style="display:inline-flex;margin:0 .35rem 0 0;font-size:.85rem;align-items:center;gap:.25rem">
+                                            <input type="checkbox" name="include_media" value="1" checked>
+                                            <?php echo $e($t('admin.backups.restore_media')) ?>
+                                        </label>
+                                    <?php endif; ?>
+                                    <button type="submit" class="btn-small"<?php echo !empty($mysqlMissing) ? ' disabled' : '' ?>><?php echo $e($t('admin.backups.restore')) ?></button>
+                                </form>
                             <?php endif; ?>
                             <form method="post" action="<?php echo $e($basePath) ?>/admin/backups/delete"
                                   data-confirm-title="<?php echo $e($t('admin.backups.delete_title')) ?>"
@@ -155,4 +183,5 @@ $size = static fn (int $bytes): string => SystemHealthReport::formatBytes($bytes
         <?php echo $e($t('admin.backups.storage_path')) ?>: <code><?php echo $e($backupsPath) ?></code>
     </p>
     <p class="muted" style="margin:.35rem 0 0;font-size:.85rem"><?php echo $e($t('admin.backups.restore_hint')) ?></p>
+    <p class="muted" style="margin:.35rem 0 0;font-size:.85rem"><?php echo $e($t('admin.backups.restore_cli')) ?></p>
 </div>

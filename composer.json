@@ -55,9 +55,10 @@
         "migrate": "php bin/migrate.php",
         "seed": "php bin/seed.php",
         "seed-legal": "php bin/seed-legal-pages.php",
-        "queue": "php bin/queue-work.php",
+        "cron": "php bin/cron.php",
         "backup": "php bin/backup.php",
         "restore": "php bin/restore.php",
+        "pack": "php bin/pack-release.php",
         "post-autoload-dump": [
             "php -r \"copy('config/deny.htaccess', 'vendor/.htaccess');\""
         ]

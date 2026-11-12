@@ -1,8 +1,8 @@
 {
   "id": "nexis/editorial",
   "name": "Editorial",
-  "version": "1.1.0",
-  "compatibleCore": "^0.4",
+  "version": "1.1.1",
+  "compatibleCore": "^0.5",
   "slots": ["header", "footer"],
   "templates": {
     "page": "templates/page.twig",

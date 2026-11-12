@@ -1,14 +1,18 @@
 # Backup & Restore
 
-Ein Backup aus dem Admin, von `php bin/backup.php` (oder `composer backup`) liegt unter `storage/backups/{timestamp}/` und enthält:
+Ein Backup aus dem Admin, von `php bin/backup.php` (oder `composer backup`) liegt unter `storage/backups/{timestamp}.zip` und enthält:
 
 - `database.sql` – logischer MariaDB-Dump (`--single-transaction`)
 - `media/` – Kopie von `storage/media/` (abwählbar)
 - `manifest.json` – Metadaten
 
+Ältere Installationen können noch explodierte Ordner `storage/backups/{timestamp}/` haben — Liste, Download und Restore lesen beide Formate.
+
 Schlägt das Backup fehl (kein `mysqldump`, leerer Dump, Medien-Fehler), wird das unvollständige Verzeichnis **verworfen** — damit kein kaputter Stand als Restore-Quelle dient.
 
-Unter XAMPP/Windows sucht das Skript `mysqldump`/`mysql` im PATH und unter `…\xampp\mysql\bin\`. Optional: `MYSQLDUMP_PATH` / `MYSQL_PATH` in `.env` bzw. Umgebung setzen.
+Der Dump nutzt `--single-transaction` und `--triggers`, bewusst **ohne** `--routines`: nach MariaDB-Upgrades ist `mysql.proc` oft inkonsistent (`Column count of mysql.proc is wrong` / Exit 2), bis `mariadb-upgrade` gelaufen ist. Nexis legt keine Stored Procedures an. Wer Routinen anderer Apps mitsichern will, nach dem Upgrade `mariadb-upgrade` ausführen und ggf. manuell dumpen.
+
+Das Skript sucht `mysqldump`/`mysql` im PATH und unter gängigen Installationspfaden (u. a. `…\mysql\bin\` auf Windows). Optional: `MYSQLDUMP_PATH` / `MYSQL_PATH` in `.env` bzw. Umgebung setzen.
 
 `.env` und Secrets gehören **nicht** ins Backup-Archiv; getrennt und verschlüsselt sichern. Der Admin-Download filtert `.env`-Dateien zusätzlich aus dem ZIP heraus.
 
@@ -16,30 +20,23 @@ Unter XAMPP/Windows sucht das Skript `mysqldump`/`mysql` im PATH und unter `…\
 
 Recht `settings.manage`, System → Backups:
 
-- **Liste** aller Stempel mit Zeit (UTC), Größe, vorhandenen Bestandteilen (`database.sql`, `media/`) und Datenbankname aus dem Manifest
-- **Jetzt sichern** — Datenbank immer, Medien optional. Liegt das letzte Backup weniger als eine Minute zurück, wird der Lauf abgelehnt (Doppelklick-Schutz).
-- **Download** als ZIP des gesamten Stempels oder nur `database.sql`
-- **Löschen** eines Stempels (mit Bestätigung)
+- **Liste** aller Sicherungen mit Name (`YYYYMMDD-HHMMSS`), Zeit (UTC), Größe, Bestandteilen (`ZIP`, `database.sql`, `media/`) und Datenbankname aus dem Manifest
+- **Jetzt sichern** — erzeugt direkt `YYYYMMDD-HHMMSS.zip` (Datenbank immer, Medien optional). Liegt das letzte Backup weniger als eine Minute zurück, wird der Lauf abgelehnt (Doppelklick-Schutz).
+- **Download** des ZIP (bereits archiviert) oder nur `database.sql`
+- **Löschen** einer Sicherung (mit Bestätigung)
+- **Wiederherstellen** einer Sicherung (Bestätigungsdialog, Medien optional abwählbar) — überschreibt die aktuelle Datenbank und optional `storage/media`
 
-Ein Restore läuft weiterhin bewusst über die Konsole (`php bin/restore.php`) — destruktive Schritte gehören nicht hinter einen Browser-Klick.
+CLI-Restore (`php bin/restore.php`) bleibt parallel verfügbar.
 
 ### Planer
 
 Im selben Screen; gespeichert als Site-Settings `backup.schedule.enabled`, `.interval` (`daily`/`weekly`), `.retain` (1–60) und `.include_media`, dazu `backup.schedule.last_run` als Zeitstempel des letzten Laufs.
 
-Ist der Planer fällig, wird ein Backup erstellt und **alle Stempel jenseits der Aufbewahrung** werden gelöscht (ältester zuerst). Verzeichnisse, die nicht dem Stempelmuster `YYYYMMDD-HHMMSS` entsprechen, bleiben unangetastet. Manuelle Backups über die UI löschen nie automatisch.
+Ist der Planer fällig, wird ein Backup erstellt und **alle Sicherungen über die Aufbewahrungsanzahl hinaus** werden gelöscht (älteste zuerst). Dateien/Ordner, die nicht dem Namensmuster `YYYYMMDD-HHMMSS` entsprechen, bleiben unangetastet. Manuelle Backups über die UI löschen nie automatisch.
 
-Ausgeführt wird der Planer an zwei Stellen — beide sind durch `storage/cache/backup-schedule.lock` gegen parallele Läufe abgesichert:
+Ausgeführt wird der Planer am Ende von **`php bin/cron.php`** (einheitlicher Cron, siehe [cron.md](cron.md) / [crontab.example](crontab.example)). Datei-Lock: `storage/cache/backup-schedule.lock` gegen Parallelläufe mit einem reinen `php bin/backup.php --scheduled` (nur Fallback, wenn kein Cron läuft).
 
-```bash
-# a) automatisch am Ende jedes Queue-Worker-Laufs
-php bin/queue-work.php
-
-# b) eigener Cron-Job (ohne Queue-Worker)
-php bin/backup.php --scheduled
-```
-
-Beide Varianten sind idempotent: Ist nichts fällig, passiert nichts (Exit 0). Ein Cron-Intervall unterhalb des Planer-Intervalls ist also unproblematisch — empfohlen sind stündliche Aufrufe.
+Ist nichts fällig, passiert nichts (Exit 0). Empfohlen: Cron jede Minute auf `bin/cron.php`.
 
 `backup.schedule.last_run` protokolliert den **Versuch**, nicht den Erfolg: Ein fehlgeschlagenes Backup (fehlendes `mysqldump`, volle Platte) landet im Log und wird erst im nächsten Intervall erneut probiert, statt bei jedem Worker-Lauf. Nach dem Beheben der Ursache hilft „Jetzt sichern“ in der UI. Existiert noch kein `last_run`, zählt das neueste vorhandene Backup als letzter Lauf — ein frisch aktivierter Planer verdoppelt ein gerade erstelltes Backup also nicht.
 
@@ -67,10 +64,14 @@ Ablauf intern: Wartungsmodus → DB-Backup + Code-Snapshot der ersetzten Pfade �
 1. Wartungsmodus (optional) unter Einstellungen → Betrieb.
 2. Backup: `php bin/backup.php` oder „Jetzt sichern“ unter `/admin/backups` — bei Fehler **nicht** updaten.
 3. Neues CMS-ZIP vom Katalog installieren / Dateien ersetzen.
-4. Bei Problemen zurückrollen: `php bin/restore.php --latest --yes` (oder konkreten Stempel).
+4. Bei Problemen zurückrollen: `php bin/restore.php --latest --yes` (oder konkreten Namen `YYYYMMDD-HHMMSS`).
 5. Wartungsmodus aus, Smoke-Test.
 
-## Restore per Skript (empfohlen)
+## Restore in der Admin-UI
+
+Unter `/admin/backups` bei einer Sicherung mit `database.sql`: **Wiederherstellen**, Bestätigung im Dialog, optional „Medien ersetzen“. Braucht den `mysql`-Client (`MYSQL_PATH` / PATH). Nach dem Lauf: Smoke-Test Startseite, `/admin/login`, Medien.
+
+## Restore per Skript
 
 ```bash
 # Backups auflisten

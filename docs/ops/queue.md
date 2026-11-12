@@ -1,55 +1,47 @@
-# Queue-Worker (Betrieb)
+# Queue & Hintergrundjobs
 
-Nexis verarbeitet Webhooks, Mail-Jobs, **plugin-registrierte Queues** und geplante Veröffentlichungen über die DB-Queue.
+Periodische Verarbeitung läuft über den **einheitlichen Cron**:
 
 ```bash
-php bin/queue-work.php
+php bin/cron.php
 ```
 
-Das Script bootet aktivierte Plugins (damit `JobHandler` / Mail-Typen greifen), verarbeitet bis zu 50 Jobs je Typ und **beendet sich danach**. Ohne regelmäßigen Lauf bleiben geplante Publishes, Webhooks, SMTP- und Plugin-Jobs liegen.
+Vorlage und Crontab: [cron.md](cron.md), [crontab.example](crontab.example).
 
-Zum Abschluss prüft der Worker einmal pro Lauf den Backup-Planer aus `/admin/backups` und erstellt bei Fälligkeit ein Backup samt Aufräumen alter Stempel. Wer keinen Queue-Worker betreibt, ruft stattdessen `php bin/backup.php --scheduled` per Cron auf — siehe [restore.md](restore.md).
+Pro Lauf (bis zu 50 Jobs je Typ, danach Exit): Webhooks, Mail, plugin-registrierte Queues, geplante Veröffentlichung/Offline, Retention-Purge und Backup-Planer. Ohne regelmäßigen Cron bleiben Jobs und geplante Publishes liegen.
 
 Purge-Fenster: Audit-Log (`AUDIT_RETENTION_DAYS`, Default 180) und Formular-Einreichungen (`FORMS_RETENTION_DAYS`, Default 365) — Details [retention.md](retention.md).
 
-## Cron (empfohlen, einfach)
+## systemd timer (optional)
 
-Jede Minute:
-
-```cron
-* * * * * cd /var/www/nexis && /usr/bin/php bin/queue-work.php >> storage/logs/queue-cron.log 2>&1
-```
-
-## systemd timer
-
-`/etc/systemd/system/nexis-queue.service`:
+`/etc/systemd/system/nexis-cron.service`:
 
 ```ini
 [Unit]
-Description=Nexis queue worker (one shot)
+Description=Nexis cron (one shot)
 After=network.target mysql.service
 
 [Service]
 Type=oneshot
 User=www-data
 Group=www-data
-WorkingDirectory=/var/www/nexis
-ExecStart=/usr/bin/php bin/queue-work.php
+WorkingDirectory=/var/www/html/nexis
+ExecStart=/usr/bin/php bin/cron.php
 ProtectSystem=full
 PrivateTmp=true
 ```
 
-`/etc/systemd/system/nexis-queue.timer`:
+`/etc/systemd/system/nexis-cron.timer`:
 
 ```ini
 [Unit]
-Description=Run Nexis queue worker every minute
+Description=Run Nexis cron every minute
 
 [Timer]
 OnBootSec=30s
 OnUnitActiveSec=60s
 AccuracySec=5s
-Unit=nexis-queue.service
+Unit=nexis-cron.service
 
 [Install]
 WantedBy=timers.target
@@ -57,7 +49,7 @@ WantedBy=timers.target
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now nexis-queue.timer
+sudo systemctl enable --now nexis-cron.timer
 sudo systemctl list-timers | grep nexis
 ```
 
@@ -68,7 +60,7 @@ sudo systemctl list-timers | grep nexis
 - Geplante Seite: Status wechselt nach Fälligkeit zu veröffentlicht
 - Webhook: Ziel-URL erhält POST inkl. `X-Nexis-Signature: sha256=<hmac-hex>`
 - Nach 5 Fehlversuchen landen Jobs in `failed_jobs` (nicht still gelöscht)
-- Parallel laufende Worker: Exit `75` bei Lock; sonst Exit `1` bei Fatal
-- Backup-Planer aktiv: neuer Stempel unter Admin → Backups, „Letzter Lauf“ aktualisiert sich
+- Parallel laufende Läufe: Exit `75` bei Lock; sonst Exit `1` bei Fatal
+- Backup-Planer aktiv: neue Sicherung unter Admin → Backups, „Letzter Lauf“ aktualisiert sich
 
-Cron sollte Exit≠0 überwachen (`storage/logs/queue-cron.log`).
+Cron sollte Exit≠0 überwachen (`storage/logs/cron.log`).

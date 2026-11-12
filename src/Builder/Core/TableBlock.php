@@ -49,10 +49,13 @@ final class TableBlock extends AbstractCoreBlock
         $withHeader = ((string) ($props['header'] ?? 'yes')) === 'yes';
         $caption = trim((string) ($props['caption'] ?? ''));
 
-        $html = '<div class="bk-table"><table>';
-        if ($caption !== '') {
-            $html .= '<caption>' . $this->e($caption) . '</caption>';
-        }
+        // Caption außerhalb des Scroll-Wrappers, damit text-align mit dem Block
+        // übereinstimmt (table-caption + overflow-x richtet sonst falsch aus).
+        $captionHtml = $caption !== ''
+            ? '<p class="bk-table__caption">' . $this->e($caption) . '</p>'
+            : '';
+
+        $html = '<div class="bk-table"><div class="bk-table__scroll"><table>';
         if ($withHeader) {
             $head = array_shift($rows);
             if (is_array($head)) {
@@ -71,7 +74,7 @@ final class TableBlock extends AbstractCoreBlock
             }
             $html .= '</tr>';
         }
-        $html .= '</tbody></table></div>';
+        $html .= '</tbody></table></div>' . $captionHtml . '</div>';
 
         return $html;
     }
