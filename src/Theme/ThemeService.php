@@ -89,13 +89,18 @@ final class ThemeService
             $pageTitle = 'hide';
         }
 
+        $logoUrl = (string) ($tokenMap['brand.logoUrl'] ?? '');
+        if ($logoUrl !== '' && str_starts_with($logoUrl, '/') && !str_starts_with($logoUrl, '//')) {
+            $logoUrl = $basePath . $logoUrl;
+        }
+
         return [
             'manifest' => $manifest,
             'tokens' => $tokenMap,
             'cssVariables' => $this->tokens->toCssVariables($tokenMap),
             'themeCssUrl' => $cssUrl,
             'customCss' => $this->catalog->customCss($site->id),
-            'logoUrl' => $tokenMap['brand.logoUrl'] ?? '',
+            'logoUrl' => $logoUrl,
             'layout' => [
                 'navPosition' => $navPosition,
                 'footerPosition' => $footerPosition,

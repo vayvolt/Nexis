@@ -253,9 +253,14 @@ final class AccountController
     public function logout(ServerRequestInterface $request): ResponseInterface
     {
         $basePath = (string) $request->getAttribute('base_path', '');
+        $user = $this->login->current();
+        $locale = $user instanceof User
+            ? Translator::normalizeUiLocale($user->uiLocale)
+            : $this->resolveGuestUiLocale($request);
         $this->login->logout();
+        $this->publicUi->rememberLocale($locale);
 
-        return $this->responses->redirect($basePath . '/account/login');
+        return $this->responses->redirect($basePath . '/account/login?lang=' . rawurlencode($locale));
     }
 
     public function showRegister(ServerRequestInterface $request): ResponseInterface

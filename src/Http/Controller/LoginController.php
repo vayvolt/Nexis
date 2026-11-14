@@ -90,9 +90,16 @@ final class LoginController
 
     public function logout(ServerRequestInterface $request): ResponseInterface
     {
+        $basePath = (string) $request->getAttribute('base_path', '');
+        $user = $this->login->current();
+        $fallback = $this->sites->installed()?->defaultLocale;
+        $locale = $user !== null
+            ? Translator::normalizeUiLocale($user->uiLocale)
+            : $this->publicUi->localeFromRequest($request, $fallback);
         $this->login->logout();
+        $this->publicUi->rememberLocale($locale);
 
-        return $this->responses->redirect((string) $request->getAttribute('base_path', '') . '/admin/login');
+        return $this->responses->redirect($basePath . '/admin/login?lang=' . rawurlencode($locale));
     }
 
     /**

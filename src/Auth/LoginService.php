@@ -8,6 +8,7 @@ use Nexis\Audit\AuditLogger;
 use Nexis\Event\EventDispatcher;
 use Nexis\Event\UserAuthenticated;
 use Nexis\Http\SessionStore;
+use Nexis\I18n\Translator;
 use Nexis\Site\SiteRepository;
 use RuntimeException;
 
@@ -73,6 +74,11 @@ final class LoginService
 
     public function logout(): void
     {
+        // Keep the account UI language for the guest session (do not fall back to Accept-Language).
+        $user = $this->current();
+        if ($user !== null && $user->uiLocale !== '') {
+            $this->session->set('_nexis_ui_locale', Translator::normalizeUiLocale($user->uiLocale));
+        }
         $this->session->remove('user_id');
         $this->session->remove('pending_2fa_user_id');
         $this->session->regenerate();
