@@ -6,6 +6,8 @@ Eine Installation verwaltet **eine Website**. Themes, Branding und Plugins erwei
 - Portal & Downloads: [nexis.vayvolt.de](https://nexis.vayvolt.de/)
 - Quellcode: [github.com/vayvolt/Nexis](https://github.com/vayvolt/Nexis)
 
+English: [README.en.md](README.en.md)
+
 Aktuell **0.8.0**: Block-Builder, Admin-/Public-i18n (de/en), First-Party-Plugins, optionaler Plugin-/Theme-Marktplatz, **Content-Sync** Staging↔Production (ZIP + CLI), **SSO / OpenID Connect**, **Passkeys**, **Benutzer-Einladung**, **Papierkorb**, leichte **Seitenhierarchie**, Backups inkl. Restore-UI, einheitlicher Cron (CLI + Web), API-CORS, Rollen-Matrix, Launch-Härte (Legal-Seeds, Consent, A11y, Retention, DSAR-Export). Die REST-API (`/api/v1`) liest und schreibt den Kern (Website, Seiten, Übersetzungen, Builder-Dokument mit `If-Match`, Publish/Revert, Medien-Upload, Plugin-Status, Theme-Tokens, Block-Registry) inkl. API-Tokens.
 
 ## Voraussetzungen

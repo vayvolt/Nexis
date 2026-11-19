@@ -40,6 +40,7 @@ Dokumentation für **Endanwender/Betrieb** und **Entwickler** (Plugin-/Theme-Ver
 | 08 | [Entwicklungsstandards](08-entwicklungsstandards.md) | PHP 8.4, Qualität, Git, Tests |
 | 09 | [Glossar und offene Entscheidungen](09-glossar-und-offene-entscheidungen.md) | Begriffe, offene Punkte |
 | — | [Architecture Decision Records](adr/README.md) | Begründete Architekturentscheidungen |
+| — | [README](../README.md) / [EN](../README.en.md) | Einstieg / Installation |
 | — | [CHANGELOG](../CHANGELOG.md) / [EN](../CHANGELOG.en.md) | Versionshistorie |
 
 ## Geltungsbereich
