@@ -1,0 +1,19 @@
+.nx-form-field[hidden] {
+  display: none !important;
+}
+
+.nx-form-field {
+  display: block;
+  margin: 0 0 0.85rem;
+}
+
+.nx-form-field label {
+  display: block;
+}
+
+.nx-form-field .nx-form-hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.9em;
+  opacity: 0.8;
+}

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="{{ uiLocale|default('de') }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ notFoundTitle|default('Not found') }}</title>
+    <style>{{ cssVariables|raw }}</style>
+    {% if themeCssUrl %}
+        <link rel="stylesheet" href="{{ themeCssUrl }}">
+    {% endif %}
+</head>
+<body class="theme-shell theme-nord">
+<main class="theme-main">
+    <article>
+        <h1>{{ notFoundHeading|default(notFoundTitle|default('Not found')) }}</h1>
+        <p>{{ message }}</p>
+        {% if requestId %}
+            <p><small>Request-ID: {{ requestId }}</small></p>
+        {% endif %}
+    </article>
+</main>
+</body>
+</html>

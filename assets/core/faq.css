@@ -1,0 +1,48 @@
+.nx-faq {
+  margin: 0 0 1.75rem;
+}
+
+.nx-faq__heading {
+  margin: 0 0 1rem;
+  font-size: 1.35rem;
+}
+
+.nx-faq__list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.nx-faq__item {
+  border: 1px solid var(--color-border, #d6d3d1);
+  border-radius: var(--radius-md, 6px);
+  background: var(--color-surface-elevated, #fff);
+  padding: 0 0.9rem;
+}
+
+.nx-faq__question {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.85rem 0;
+  list-style: none;
+}
+
+.nx-faq__question::-webkit-details-marker {
+  display: none;
+}
+
+.nx-faq__question::after {
+  content: "+";
+  float: right;
+  font-weight: 400;
+  color: var(--color-text-muted, #78716c);
+}
+
+.nx-faq__item[open] > .nx-faq__question::after {
+  content: "–";
+}
+
+.nx-faq__answer {
+  padding: 0 0 0.95rem;
+  color: var(--color-text-muted, #57534e);
+  line-height: 1.55;
+}
